@@ -1,3 +1,13 @@
 /* application css */
 body {margin:0px;}
 #main {font-size:200%;}
+
+.pagebreak{background: darkblue; border-radius:5px;color:white;}
+.paragraph{font-size:75%;background: darkgreen; border-radius:5px;color:white;}
+.footnote{font-size:50%;background: pink; border-radius:5px;color:black;}
+.link {font-size:50%;color:lightblue;text-decoration: underline;}
+.kai {font-family: DFKai-SB;color:brown;}
+.bold {font-weight: bold}
+.hide {font-size:1px;width:0px;}
+.kepan{background: pink; color:red;}
+.kepannode {border:solid 1px lightgreen;}
