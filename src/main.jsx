@@ -1,43 +1,19 @@
 var React=require("react");
 var E=React.createElement;
 var PT=React.PropTypes;
-var Parallel=require("ksana2015-parallel");
-var {action,store,getter,registerGetter,unregisterGetter}=Parallel.model;
-var ControlPanel=Parallel.ControlPanel;
-var TwoColumn=Parallel.TwoColumn;
-var loadtext=require("./loadtext");
+var TwoColumnMode=require("ksana2015-parallel").TwoColumnMode;
+var leftDocs=[{name:"jin",label:"經"},{name:"lun",label:"論"}],
+ rightDocs=[{name:"jin",label:"經"},{name:"lun",label:"論"},{name:"eng",label:"英"}];
+var leftDoc="jin";
 
 var maincomponent = React.createClass({
   getInitialState:function() {
     return {};
   },
   componentDidMount:function(){
-    store.listen("loaded",this.loaded,this);
   }
-  ,loaded:function(obj){
-    console.log(obj)
-  }
-  ,childContextTypes: {
-    store: PT.object
-    ,action: PT.func
-    ,getter: PT.func
-    ,registerGetter:PT.func
-    ,unregisterGetter:PT.func
-  }
-  ,getChildContext:function(){
-    return {action,store,getter,registerGetter,unregisterGetter};
-  }  
   ,render: function() {
-    return E("div",
-      {style:styles.topcontainer},
-      E(ControlPanel,{style:styles.controls}),
-      E(TwoColumn,{style:styles.body})
-    )
+    return E(TwoColumnMode,{rightDocs,leftDocs,leftDoc});
   }
 });
-var styles={
-  topcontainer:{display:"flex",width:"100%"},
-  controls:{flex:1,background:'gray'},
-  body:{flex:4},
-}
 module.exports=maincomponent;
