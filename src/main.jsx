@@ -5,8 +5,9 @@ var TwoColumnMode=require("ksana2015-parallel").TwoColumnMode;
 
 var rule=require("./rule");
 var leftDocs=[{name:"jin",label:"經",rule},{name:"lun",label:"論",rule}],
- rightDocs=[{name:"jin",label:"經",rule},{name:"lun",label:"論",rule},{name:"eng",label:"英",rule}];
-var leftDoc="jin";
+ rightDocs=[{name:"jin",label:"經",rule},{name:"lun",label:"論",rule}];
+// ,{name:"eng",label:"英",rule}];
+var leftDoc="jin",rightDoc="lun";
 
 var maincomponent = React.createClass({
   getInitialState:function() {
@@ -15,7 +16,7 @@ var maincomponent = React.createClass({
   componentDidMount:function(){
   }
   ,render: function() {
-    return E(TwoColumnMode,{rightDocs,leftDocs,leftDoc});
+    return E(TwoColumnMode,{rightDocs,leftDocs,leftDoc,rightDoc});
   }
 });
 module.exports=maincomponent;

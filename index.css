@@ -9,6 +9,11 @@ body {margin:0px;}
 .link {font-size:50%;color:lightblue;text-decoration: underline;cursor:pointer}
 .kai {font-family: DFKai-SB;font-size:90%;font-width:100;}
 .bold {font-weight: bold;}
-.hide {font-size:1px;width:0px;}
+.hide {display:none;}
 .kepan{background: pink; color:red;}
-.kepannode {border:solid 1px lightgreen;}
+/*not to use border as it might trigger line height adjustment*/
+/* use rainbow color */
+.kepannode {text-decoration: underline overline;color:lightgreen;}
+.ndef {font-size:80%;line-height: 125%;}
+.ndef_odd {background: #002020;}
+.ndef_even {background: #202000;}

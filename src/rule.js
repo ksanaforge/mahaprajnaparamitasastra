@@ -1,6 +1,8 @@
 /*
   
 */
+
+var notepat=/#([0-9.]+)/g;
 var createMarker=function(classname,tag) {
 		var element=document.createElement("SPAN");
 		element.className=classname;
@@ -8,12 +10,12 @@ var createMarker=function(classname,tag) {
 		//element.onclick=onTagClick;
 		return element;
 }
-var markLines=function(doc,from,to){
+var markLines=function(doc,from,to,ndefs){
 	var M=doc.findMarks({line:from,ch:0},{line:to,ch:65536});
 	M.forEach(function(m){m.clear()});
 
 	for (var i=from;i<to+1;i++) {
-		markLine(doc, i ,true);
+		markLine(doc, i ,{keepold:true,ndefs});
 	}
 }
 var markAllLine=function(doc){
@@ -21,18 +23,50 @@ var markAllLine=function(doc){
 	for (var i=0;i<M.length;i++) M[i].clear();
 	var linecount=doc.lineCount();
 	for (var i=0;i<linecount;i++) {
-		markLine(doc,i,true);
+		markLine(doc,i,{keepold:true});
 	}
 }
+var getNotes=function(line){
+	var out=[];
+	line.replace(/#([0-9.]+)/g,function(m,m1){
+		out.push(m1);
+	});
+	return out;
+}
+var getNoteFile=function(note){
+	return "ndef"+Math.floor(parseInt(note) / 10);
+}
+var notewidgets=[];
 
-var markLine=function(doc,i, keepold) {
+var markNote=function(doc,i,line,ndefs){
+	var notes=[];
+	line.replace(notepat,function(m,m1,idx){
+		var element=createMarker("footnote",m1);
+		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
+			{replacedWith:element});
+		element.marker=marker;
+		notes.push(m1);
+	});
+	clearNote();
+	for (var j=0;j<notes.length;j++) {
+		var suffix="_even";
+		if (j%2==1) suffix="_odd";
+		var element=createMarker("ndef ndef"+suffix,notes[j]+" "+ndefs[notes[j]]);
+		notewidgets.push(doc.addLineWidget(i,element));
+	}
+}
+var clearNote=function(){
+	notewidgets.map(function(item){item.clear()});	
+}
+var markLine=function(doc,i, opts) {
 	if (i>doc.lineCount())return;
+	if (!opts) opts={};
+	var activeline=doc.getCursor().line;
 	var line=doc.getLine(i);
-	if (!keepold) { // set to true if all markup already been cleared
+	if (!opts.keepold) { // set to true if all markup already been cleared
 		var M=doc.findMarks({line:i,ch:0},{line:i,ch:65536});
 		M.forEach(function(m){m.clear()});		
 	}
-
 
 	line.replace(/~(\d+)/g,function(m,pb,idx){
 		var element=createMarker("pagebreak",pb);
@@ -48,12 +82,14 @@ var markLine=function(doc,i, keepold) {
 		element.marker=marker;
 	});
 
-	line.replace(/#([0-9.]+)/g,function(m,m1,idx){
-		var element=createMarker("footnote",m1);
-		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
-			{replacedWith:element});
-		element.marker=marker;
-	});
+	if (i==activeline) {
+		markNote(doc,i,line,opts.ndefs);
+	} else {
+		line.replace(notepat,function(m,m1,idx){
+			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
+				{className:"hide"});
+		});		
+	}
 
 	line.replace(/\{([^k]+?)\}/g,function(m,m1,idx){
 		var marker=doc.markText({line:i,ch:idx+1},{line:i,ch:idx+m.length-1},
@@ -89,4 +125,4 @@ var markLine=function(doc,i, keepold) {
 	});
 
 }
-module.exports={markAllLine,markLine,markLines};
+module.exports={markAllLine,markLine,markLines,clearNote,getNotes,getNoteFile};
