@@ -17,11 +17,13 @@ var convertNdef=function(lines){
 		var m=line.match(/#(\d+)\.(\d+)/);
 		if (m) {
 			if (lastnoteid) {
-				out[lastnoteid]=lastnote;
+				out[lastnoteid.trim()]=lastnote;
 				lastnote=line.substr(m[0].length);
 			}
 			if (lastjuan!==m[1] && parseInt(lastjuan)%10==0) {
 				//new batch for every 10 juan
+				out[lastnoteid.trim()]=lastnote;
+				console.log(lastnoteid)
 				arr.push(out);
 				out={};
 			}
