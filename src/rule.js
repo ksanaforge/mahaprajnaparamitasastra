@@ -1,13 +1,20 @@
 /*
   
 */
-
+var actionhandler=null;
 var notepat=/#([0-9.]+)/g;
+var parapat=/\^([0-9.]+)/g;
+
+var onTagClick=function(e){
+	if (e.target.className=="paragraph") {
+		actionhandler("gopara",e.target.innerHTML);
+	}
+}
 var createMarker=function(classname,tag) {
 		var element=document.createElement("SPAN");
 		element.className=classname;
 		element.innerHTML=tag;
-		//element.onclick=onTagClick;
+		element.onclick=onTagClick;
 		return element;
 }
 var markLines=function(doc,from,to,ndefs){
@@ -26,9 +33,19 @@ var markAllLine=function(doc){
 		markLine(doc,i,{keepold:true});
 	}
 }
+var makeParagraph=function(id) {
+	return "^"+id;
+}
+var getParagraph=function(content){
+	var out=[];
+	content.replace(parapat,function(m,m1){
+		out.push(m1);
+	});
+	return out;
+}
 var getNotes=function(line){
 	var out=[];
-	line.replace(/#([0-9.]+)/g,function(m,m1){
+	line.replace(notepat,function(m,m1){
 		out.push(m1);
 	});
 	return out;
@@ -67,15 +84,21 @@ var markLine=function(doc,i, opts) {
 		var M=doc.findMarks({line:i,ch:0},{line:i,ch:65536});
 		M.forEach(function(m){m.clear()});		
 	}
+	if (i==activeline) {
+		line.replace(/~(\d+)/g,function(m,pb,idx){
+			var element=createMarker("pagebreak",pb);
+			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
+				{replacedWith:element});
+			element.marker=marker;
+		});
+	} else {
+		line.replace(/~(\d+)/g,function(m,pb,idx){
+			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
+				{className:"hide"});
+		});
+	}
 
-	line.replace(/~(\d+)/g,function(m,pb,idx){
-		var element=createMarker("pagebreak",pb);
-		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
-			{replacedWith:element});
-		element.marker=marker;
-	});
-
-	line.replace(/\^([0-9.]+)/g,function(m,m1,idx){
+	line.replace(parapat,function(m,m1,idx){
 		var element=createMarker("paragraph",m1);
 		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 			{replacedWith:element});
@@ -106,13 +129,19 @@ var markLine=function(doc,i, opts) {
 		doc.markText({line:i,ch:idx},{line:i,ch:idx+2},{className:"hide"});
 		doc.markText({line:i,ch:idx+m.length-2},{line:i,ch:idx+m.length},{className:"hide"});
 	});
-
-	line.replace(/@([A-Za-z0-9]+)/g,function(m,m1,idx){
-		var element=createMarker("link",m1);
-		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
-			{replacedWith:element});
-		element.marker=marker;
-	});
+	if (i==activeline) {
+		line.replace(/@([A-Za-z0-9]+)/g,function(m,m1,idx){
+			var element=createMarker("link",m1);
+			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
+				{replacedWith:element});
+			element.marker=marker;
+		});
+	} else {
+		line.replace(/@([A-Za-z0-9]+)/g,function(m,m1,idx){
+			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
+				{className:"hide"});
+		});
+	}
 
 
 	line.replace(/%(\d) (.*)/g,function(m,d,title,idx){
@@ -125,4 +154,11 @@ var markLine=function(doc,i, opts) {
 	});
 
 }
-module.exports={markAllLine,markLine,markLines,clearNote,getNotes,getNoteFile};
+
+var setActionHandler=function(_actionhandler){
+	actionhandler=_actionhandler;
+}
+module.exports={markAllLine,markLine,markLines
+	,clearNote,getNotes,getNoteFile
+	,getParagraph,makeParagraph
+	,setActionHandler};
