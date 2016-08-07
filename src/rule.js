@@ -8,7 +8,14 @@ var createMarker=function(classname,tag) {
 		//element.onclick=onTagClick;
 		return element;
 }
+var markLines=function(doc,from,to){
+	var M=doc.findMarks({line:from,ch:0},{line:to,ch:65536});
+	M.forEach(function(m){m.clear()});
 
+	for (var i=from;i<to+1;i++) {
+		markLine(doc, i ,true);
+	}
+}
 var markAllLine=function(doc){
 	var M=doc.getAllMarks();
 	for (var i=0;i<M.length;i++) M[i].clear();
@@ -21,7 +28,7 @@ var markAllLine=function(doc){
 var markLine=function(doc,i, keepold) {
 	if (i>doc.lineCount())return;
 	var line=doc.getLine(i);
-	if (keepold) { // set to true if all markup already been cleared
+	if (!keepold) { // set to true if all markup already been cleared
 		var M=doc.findMarks({line:i,ch:0},{line:i,ch:65536});
 		M.forEach(function(m){m.clear()});		
 	}
@@ -48,6 +55,14 @@ var markLine=function(doc,i, keepold) {
 		element.marker=marker;
 	});
 
+	line.replace(/\{([^k]+?)\}/g,function(m,m1,idx){
+		var marker=doc.markText({line:i,ch:idx+1},{line:i,ch:idx+m.length-1},
+			{className:"bold"});
+		//hide control code
+		doc.markText({line:i,ch:idx},{line:i,ch:idx+1},{className:"hide"});
+		doc.markText({line:i,ch:idx+m.length-1},{line:i,ch:idx+m.length},{className:"hide"});
+	});
+//TODO : deal with cross line kai
 	line.replace(/\{k(.+?)k\}/g,function(m,m1,idx){
 		var marker=doc.markText({line:i,ch:idx+2},{line:i,ch:idx+m.length-2},
 			{className:"kai"});
@@ -74,4 +89,4 @@ var markLine=function(doc,i, keepold) {
 	});
 
 }
-module.exports={markAllLine,markLine};
+module.exports={markAllLine,markLine,markLines};

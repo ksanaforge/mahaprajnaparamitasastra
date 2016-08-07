@@ -1,13 +1,14 @@
 /* application css */
 body {margin:0px;}
-#main {font-size:200%;}
+#main {font-size:150%;line-height: 150%}
 
 .pagebreak{background: darkblue; border-radius:5px;color:white;}
-.paragraph{font-size:75%;background: darkgreen; border-radius:5px;color:white;}
-.footnote{font-size:50%;background: pink; border-radius:5px;color:black;}
-.link {font-size:50%;color:lightblue;text-decoration: underline;}
-.kai {font-family: DFKai-SB;color:brown;}
-.bold {font-weight: bold}
+.paragraph{font-size:75%;background: darkgreen; 
+	border-radius:5px;color:white;cursor:pointer;}
+.footnote{font-size:50%;background: pink; border-radius:5px;color:black;cursor:pointer}
+.link {font-size:50%;color:lightblue;text-decoration: underline;cursor:pointer}
+.kai {font-family: DFKai-SB;font-size:90%;font-width:100;}
+.bold {font-weight: bold;}
 .hide {font-size:1px;width:0px;}
 .kepan{background: pink; color:red;}
 .kepannode {border:solid 1px lightgreen;}
