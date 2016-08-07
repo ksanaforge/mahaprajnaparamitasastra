@@ -4,10 +4,23 @@
 var actionhandler=null;
 var notepat=/#([0-9.]+)/g;
 var parapat=/\^([0-9.]+)/g;
-
+var linkpat=/@([A-Za-z0-9]+)/g;
+var kepanpat=/%(\d) (.*)/g;
+var boldpat=/\{([^k]+?)\}/g;
+var kaipat=/\{k(.+?)k\}/g
+var pgpat=/~(\d+)/g;
+var taishotext=/t(\d+)p(\d+)([a-c])?/
 var onTagClick=function(e){
-	if (e.target.className=="paragraph") {
+	var cls=e.target.className;
+	if (cls==="paragraph") {
 		actionhandler("gopara",e.target.innerHTML);
+	} else if (cls==="link") {
+		var m=e.target.innerHTML.match(taishotext);
+		if (m) {
+			var vol=m[1],pg=m[2],col=m[3];
+			window.open("http://www.cbeta.org/cgi-bin/goto.pl?book=T&vol="+vol+"&page="+pg+"&col="+col);
+		}
+		
 	}
 }
 var createMarker=function(classname,tag) {
@@ -85,7 +98,7 @@ var markLine=function(doc,i, opts) {
 		M.forEach(function(m){m.clear()});		
 	}
 	if (i==activeline) {
-		line.replace(/~(\d+)/g,function(m,pb,idx){
+		line.replace(pgpat,function(m,pb,idx){
 			var element=createMarker("pagebreak",pb);
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{replacedWith:element});
@@ -114,7 +127,7 @@ var markLine=function(doc,i, opts) {
 		});		
 	}
 
-	line.replace(/\{([^k]+?)\}/g,function(m,m1,idx){
+	line.replace(boldpat,function(m,m1,idx){
 		var marker=doc.markText({line:i,ch:idx+1},{line:i,ch:idx+m.length-1},
 			{className:"bold"});
 		//hide control code
@@ -122,7 +135,7 @@ var markLine=function(doc,i, opts) {
 		doc.markText({line:i,ch:idx+m.length-1},{line:i,ch:idx+m.length},{className:"hide"});
 	});
 //TODO : deal with cross line kai
-	line.replace(/\{k(.+?)k\}/g,function(m,m1,idx){
+	line.replace(kaipat,function(m,m1,idx){
 		var marker=doc.markText({line:i,ch:idx+2},{line:i,ch:idx+m.length-2},
 			{className:"kai"});
 		//hide control code
@@ -130,21 +143,21 @@ var markLine=function(doc,i, opts) {
 		doc.markText({line:i,ch:idx+m.length-2},{line:i,ch:idx+m.length},{className:"hide"});
 	});
 	if (i==activeline) {
-		line.replace(/@([A-Za-z0-9]+)/g,function(m,m1,idx){
+		line.replace(linkpat,function(m,m1,idx){
 			var element=createMarker("link",m1);
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{replacedWith:element});
 			element.marker=marker;
 		});
 	} else {
-		line.replace(/@([A-Za-z0-9]+)/g,function(m,m1,idx){
+		line.replace(linkpat,function(m,m1,idx){
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{className:"hide"});
 		});
 	}
 
 
-	line.replace(/%(\d) (.*)/g,function(m,d,title,idx){
+	line.replace(kepanpat,function(m,d,title,idx){
 		var element=createMarker("kepan",d);
 		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
 			{replacedWith:element});
