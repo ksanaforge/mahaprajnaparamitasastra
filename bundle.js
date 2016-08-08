@@ -38,13 +38,13 @@ var actionhandler=null;
 var notepat=/#([0-9.]+)/g;
 var parapat=/\^([0-9.]+)/g;
 var linkpat=/@([A-Za-z0-9]+)/g;
-var kepanpat=/%(\d) (.*)/g;
+var kepanpat=/%(\d+) (.*)/g;
 var boldpat=/\{([^k]+?)\}/g;
 var kaipat=/\{k(.+?)k\}/g
 var pgpat=/~(\d+)/g;
 var taishotext=/t(\d+)p(\d+)([a-c])?/
 var onTagClick=function(e){
-	var cls=e.target.className;
+	var cls=e.target.className;  
 	if (cls==="paragraph") {
 		actionhandler("gopara",e.target.innerHTML);
 	} else if (cls==="link") {
@@ -53,7 +53,6 @@ var onTagClick=function(e){
 			var vol=m[1],pg=m[2],col=m[3];
 			window.open("http://www.cbeta.org/cgi-bin/goto.pl?book=T&vol="+vol+"&page="+pg+"&col="+col);
 		}
-		
 	}
 }
 var createMarker=function(classname,tag) {
@@ -97,7 +96,7 @@ var getNotes=function(line){
 	return out;
 }
 var getNoteFile=function(note){
-	return "ndef"+Math.floor(parseInt(note) / 10);
+	return "ndef"+Math.floor((parseInt(note)-1) / 10);
 }
 var notewidgets=[];
 
