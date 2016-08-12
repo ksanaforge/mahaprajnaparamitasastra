@@ -5,7 +5,7 @@ var actionhandler=null;
 var notepat=/#([0-9.]+)/g;
 var parapat=/\^([0-9.]+)/g;
 var linkpat=/@([A-Za-z0-9]+)/g;
-var kepanpat=/%(\d+) (.*)/g;
+var kepanpat=/%(\d+\.\d+) (.*)%?/g;
 var boldpat=/\{([^k]+?)\}/g;
 var kaipat=/\{k(.+?)k\}/g
 var pgpat=/~(\d+)/g;
@@ -47,6 +47,9 @@ var markAllLine=function(doc){
 }
 var makeParagraph=function(id) {
 	return "^"+id;
+}
+var makeKepan=function(id) {
+	return "%"+id;
 }
 var getParagraph=function(content){
 	var out=[];
@@ -162,7 +165,8 @@ var markLine=function(doc,i, opts) {
 			{replacedWith:element});
 		element.marker=marker;
 
-		doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},{className:"kepannode"});
+		doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},
+			{className:"kepannode"});
 	});
 
 }
@@ -172,5 +176,5 @@ var setActionHandler=function(_actionhandler){
 }
 module.exports={markAllLine,markLine,markLines
 	,clearNote,getNotes,getNoteFile
-	,getParagraph,makeParagraph
+	,getParagraph,makeParagraph,makeKepan
 	,setActionHandler};

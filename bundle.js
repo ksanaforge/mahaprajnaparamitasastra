@@ -38,7 +38,7 @@ var actionhandler=null;
 var notepat=/#([0-9.]+)/g;
 var parapat=/\^([0-9.]+)/g;
 var linkpat=/@([A-Za-z0-9]+)/g;
-var kepanpat=/%(\d+) (.*)/g;
+var kepanpat=/%(\d+\.\d+) (.*)%?/g;
 var boldpat=/\{([^k]+?)\}/g;
 var kaipat=/\{k(.+?)k\}/g
 var pgpat=/~(\d+)/g;
@@ -80,6 +80,9 @@ var markAllLine=function(doc){
 }
 var makeParagraph=function(id) {
 	return "^"+id;
+}
+var makeKepan=function(id) {
+	return "%"+id;
 }
 var getParagraph=function(content){
 	var out=[];
@@ -195,7 +198,8 @@ var markLine=function(doc,i, opts) {
 			{replacedWith:element});
 		element.marker=marker;
 
-		doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},{className:"kepannode"});
+		doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},
+			{className:"kepannode"});
 	});
 
 }
@@ -205,7 +209,7 @@ var setActionHandler=function(_actionhandler){
 }
 module.exports={markAllLine,markLine,markLines
 	,clearNote,getNotes,getNoteFile
-	,getParagraph,makeParagraph
+	,getParagraph,makeParagraph,makeKepan
 	,setActionHandler};
 },{}],"C:\\ksana2015\\node_modules\\codemirror\\addon\\dialog\\dialog.js":[function(require,module,exports){
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
@@ -11179,6 +11183,7 @@ var CMView=React.createClass({
 	}
 	,defaultListeners:function(){
 		this.context.store.listen("gopara",this.onGoPara,this);
+		this.context.store.listen("gokepan",this.onGoKepan,this);
 		this.context.store.listen("loaded",this.onLoaded,this);
 	}
 	,componentDidMount:function(){
@@ -11197,23 +11202,30 @@ var CMView=React.createClass({
 		}
 		return t;
 	}
-	,onGoPara:function(para){
-		var screentext=this.getScreenText();
-		var rule=this.getDocRule();
+	,scrollToText:function(t){
 		var cm=this.refs.cm.getCodeMirror();
-		var paragraphs=rule.getParagraph(screentext);
-		if (paragraphs.indexOf(para)==-1) {
-			var text=cm.getValue();
-			var paratext=rule.makeParagraph(para)
-			var at=text.indexOf(paratext);
-			if (at>-1) {
-				var pos=cm.doc.posFromIndex(at);
-				//scroll to last line , so that the paragraph will be at top
-				cm.scrollIntoView({line:cm.doc.lineCount()-1,ch:0})
-				pos.line--;
-				cm.scrollIntoView(pos);
-			}
+		var text=cm.getValue();
+		var at=text.indexOf(t);
+		if (at>-1) {
+			var pos=cm.doc.posFromIndex(at);
+			//scroll to last line , so that the paragraph will be at top
+			cm.scrollIntoView({line:cm.doc.lineCount()-1,ch:0})
+			pos.line--;
+			cm.scrollIntoView(pos);
 		}
+	}
+	/*
+			var screentext=this.getScreenText();
+	*/
+	,onGoKepan:function(kepan) {
+		var rule=this.getDocRule();
+		var kepantext=rule.makeKepan(kepan);
+		this.scrollToText(kepantext);
+	}
+	,onGoPara:function(para){
+		var rule=this.getDocRule();
+		var paratext=rule.makeParagraph(para);
+		this.scrollToText(paratext);
 	}
 	,onNDefLoaded:function(arg){
 		this.context.store.unlistenAll(this);
@@ -11274,7 +11286,7 @@ var CMView=React.createClass({
 		}
 	}
 	,onLoaded:function(res){
-		if (res.side!=this.props.side) return;
+		if (res.side!==this.props.side) return;
 		var cm=this.refs.cm.getCodeMirror();
 		cm.setValue(res.data);
 	}
@@ -11318,32 +11330,37 @@ module.exports=CMView;
 var React=require("react");
 var E=React.createElement;
 var PT=React.PropTypes;
+var TreeToc=require("ksana2015-treetoc").Component;
 
 var ControlPanel = React.createClass({
   getInitialState:function() {
-    return {filename:"jin"};
+    return {filename:"jin",toc:[]};
   }
   ,contextTypes:{
   	store:PT.object.isRequired,
   	getter:PT.func.isRequired,
   	action:PT.func.isRequired
   }
-  ,load:function(){
-  	var fn=this.state.filename;
-		this.context.getter("file",fn,function(data){
-			action("loaded",data);
-		});
-  	this.context.action("load","filename");
+  ,componentDidMount:function(){
+    this.context.getter("file","kepan");
+    this.context.store.listen("loaded",this.treeloaded,this);
   }
-  ,onFilenameChange:function(e){
-  	this.setState({filename:e.target.value});
+  ,treeloaded:function(obj){
+    if (obj.filename!=="kepan")return;
+  	this.setState({toc:obj.data});
+  }
+  ,onSelect:function(ctx,node,i,nodes){
+    this.context.action("gokepan",node.l);
   }
   ,render:function(){
-  	return E("div",{style:this.props.style});
+  	return E("div",{style:this.props.style},
+      //E("span",{},"Search"),
+      //E("input",{}),
+      E(TreeToc,{toc:this.state.toc,onSelect:this.onSelect}));
   }
 });
 module.exports=ControlPanel;
-},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js":[function(require,module,exports){
+},{"ksana2015-treetoc":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js":[function(require,module,exports){
 /* jsonp loading text dynamically */
 var {action,store,getter,registerGetter}=require("./model");
 
@@ -11612,11 +11629,646 @@ var modemain = React.createClass({
 });
 var styles={
   topcontainer:{display:"flex"},
-  controls:{flex:1,background:'gray'},
+  controls:{flex:1,background:'gray',height:"100%",overflowY:"scroll",overflowX:"hidden"},
   body:{flex:4},
 }
 module.exports=modemain;
-},{"./controlpanel":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\controlpanel.js","./model":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\model.js","./twocolumn":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\twocolumn.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\downloader.js":[function(require,module,exports){
+},{"./controlpanel":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\controlpanel.js","./model":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\model.js","./twocolumn":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\twocolumn.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\addnode.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var styles={
+	textarea:{fontSize:"100%"}
+}
+var linecount=function(t) {
+	var lcount=0;
+	t.replace(/\n/g,function(){
+		lcount++;
+	})
+	return lcount+2;
+}
+var AddNode=React.createClass({
+	propTypes:{
+		action: React.PropTypes.func.isRequired
+	}
+	,addingkeydown:function(e) {
+		var t=e.target.value;
+		if (e.key=="Enter" && t.charCodeAt(t.length-1)===10) {
+			this.props.action("addnode",t.split("\n"),this.props.insertBefore);
+		}
+		var lc=linecount(t);
+		e.target.rows=lc;
+	}
+	,componentDidMount:function() {
+		this.refs.adding.focus();
+	}
+	,render:function(){
+		return E("div", {}, 
+			E("textarea",
+				{style:styles.textarea,onKeyDown:this.addingkeydown,ref:"adding"
+				 ,placeholder:"leading space to create child node",defaultValue:""}
+		));
+	}
+
+})
+
+module.exports=AddNode;
+},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+
+var Controls=React.createClass({
+	propTypes:{
+		enabled:React.PropTypes.array.isRequired
+		,action:React.PropTypes.func.isRequired
+	}
+	,getDefaultProps:function(){
+		return {enabled:[]};
+	}
+	,enb:function(name) {
+		return this.props.enabled.indexOf(name)===-1;		
+	}
+	,act:function(name) {
+		var that=this;
+		return function(e){
+			that.props.action(name,e.ctrlKey);
+		}
+	}
+	,render:function() {
+		return E("span",{},
+			E("button" ,{onClick:this.act("addingnode"),title:"Create a new node below, press Ctrl to above here."},"＋"),
+			E("button" ,{style:{visibility:"hidden"}}," "),
+			E("button" ,{onClick:this.act("levelup"),title:"level -1",disabled:this.enb("levelup")},"⇠"),
+			E("button" ,{onClick:this.act("leveldown"),title:"level +1",disabled:this.enb("leveldown")},"⇢")
+		);
+	}
+})
+
+module.exports=Controls;
+},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js":[function(require,module,exports){
+/*
+   toc data format
+   array of { d:depth, o:opened, t:text, n:next_same_level ]
+
+   only first level can be 0
+
+   TODO, do not write directly to props.toc
+*/
+var React=require("react");
+var TreeNode=require("./treenode");
+var E=React.createElement;
+var manipulate=require("./manipulate");
+
+var buildToc = function(toc) {
+	if (!toc || !toc.length || toc.built) return;
+	var depths=[];
+ 	var prev=0;
+ 	if (toc.length>1) {
+ 		toc[0].o=true;//opened
+ 	}
+ 	for (var i=0;i<toc.length;i++) delete toc[i].n;
+	for (var i=0;i<toc.length;i++) {
+	    var depth=toc[i].d||toc[i].depth;
+	    if (prev>depth) { //link to prev sibling
+	      if (depths[depth]) toc[depths[depth]].n = i;
+	      for (var j=depth;j<prev;j++) depths[j]=0;
+	    }
+    	depths[depth]=i;
+    	prev=depth;
+	}
+	toc.built=true;
+	return toc;
+}
+var genToc=function(toc,title) {
+    var out=[{d:0,t:title||ksana.js.title}];
+    if (toc.texts) for (var i=0;i<toc.texts.length;i++) {
+      out.push({t:toc.texts[i],d:toc.depths[i], vpos:toc.vpos[i]});
+    }
+    return out;
+}
+
+var TreeToc=React.createClass({
+	propTypes:{
+		toc:React.PropTypes.array.isRequired  //core toc dataset
+		,opts:React.PropTypes.object    
+		,onSelect:React.PropTypes.func  //user select a treenode
+		,tocid:React.PropTypes.string  //toc view 
+		,styles:React.PropTypes.object //custom styles
+		,conv:React.PropTypes.func //custom converter for each item
+	}
+	,getInitialState:function(){
+		return {editcaption:-1,selected:[]};
+	}
+	,clearHits:function() {
+		for (var i=0;i<this.props.toc.length;i++) {
+			if (this.props.toc[i].hit) delete this.props.toc[i].hit;
+		}
+	}
+	,componentDidMount:function() {
+		buildToc(this.props.toc);
+	}
+	,componentWillReceiveProps:function(nextProps) {
+		if (nextProps.toc && !nextProps.toc.built) {
+			buildToc(nextProps.toc);
+		}
+		if (nextProps.hits!==this.props.hits) {
+			this.clearHits();
+		}
+		this.action("updateall");
+	}
+	,getDefaultProps:function() {
+		return {opts:{}};
+	}
+	,markDirty:function() {
+		this.props.onChanged&&this.props.onChanged();
+	}
+	,action:function() {
+		var args=Array.prototype.slice.apply(arguments);
+		var act=args.shift();
+		var p1=args[0];
+		var p2=args[1];
+		var sels=this.state.selected;
+		var toc=this.props.toc;
+		var r=false;
+		if (act==="updateall") {
+			this.setState({editcaption:-1,deleting:-1});
+		} else if (act==="editcaption") {
+			var n=parseInt(p1);
+			this.setState({editcaption:n,selected:[n]});
+		} else if (act==="deleting") {
+			this.setState({deleting:this.state.editcaption});
+		} else if (act==="changecaption") {
+			if (!this.state.editcaption===-1) return;
+			if (!p1) {
+				this.action("deleting");
+			} else {
+				this.props.toc[this.state.editcaption].t=p1;
+				this.setState({editcaption:-1});
+				this.markDirty();
+			}
+		} else if (act==="select") {
+			var selected=this.state.selected;
+			if (!(this.props.opts.multiselect && p2)) {
+				selected=[];
+			}
+			var n=parseInt(p1);
+			if (!isNaN(n)) {
+				selected.push(n);
+				this.props.onSelect&&this.props.onSelect(this.props.tocid,this.props.toc[n],n,this.props.toc);
+			}
+			this.setState({selected:selected,editcaption:-1,deleting:-1,adding:0});
+		} else if (act==="addingnode") {
+			var insertAt=sels[0];
+			if (p1) {
+				insertAt=-insertAt; //ctrl pressed insert before
+			}
+			this.setState({adding:insertAt,editcaption:-1});
+		} else if (act=="addnode") {
+			var n=this.state.selected[0];
+			r=manipulate.addNode(toc,n,p1,p2)
+		}else if (act==="levelup") r=manipulate.levelUp(sels,toc);
+		else if (act==="leveldown") r=manipulate.levelDown(sels,toc);
+		else if (act==="deletenode") r=manipulate.deleteNode(sels,toc);
+		else if (act==="hitclick") {
+			this.props.onHitClick&&this.props.onHitClick(this.props.tocid,this.props.toc[p1],p1,this.props.toc);
+		}
+		if (r) {
+			toc.built=false;//force rebuild
+			buildToc(toc);
+			this.setState({editcaption:-1,deleting:-1,adding:0});
+			if (act==="deletenode") this.setState({selected:[]});
+			this.markDirty();
+		}
+	}
+	,render:function() {
+		return E("div",{},
+			E(TreeNode,{toc:this.props.toc,
+				editcaption:this.state.editcaption,
+				deleting:this.state.deleting,
+				selected:this.state.selected,
+				treename:this.props.treename,
+				styles:this.props.styles,
+				adding:this.state.adding,
+				opened:this.props.opened,
+				closed:this.props.closed,
+				captionClass:this.props.captionClass,
+				nodeicons:this.props.nodeicons,
+				action:this.action,opts:this.props.opts,cur:0,
+				hits:this.props.hits,
+				conv:this.props.conv
+			}));
+	}
+})
+module.exports={Component:TreeToc,genToc:genToc,buildToc:buildToc};
+
+},{"./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","./treenode":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\treenode.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js":[function(require,module,exports){
+var descendantOf=function(n,toc) { /* returning all descendants */
+	var d=toc[n].d;
+	n++;
+	while (n<toc.length) {
+		if (toc[n].d<=d) return n;
+		n++;
+	}
+	return toc.length-1;
+}
+var levelUp =function(sels,toc) { //move select node and descendants one level up
+	if (!canLevelup(sels,toc))return;
+	var n=sels[0];
+	var cur=toc[n];
+	var next=toc[n+1];
+	var nextsib=cur.n||descendantOf(n,toc);
+	if (next && next.d>cur.d) { //has child
+		for (var i=n+1;i<nextsib;i++) {
+			toc[i].d--;
+		}
+	}
+	cur.d--;
+	cur.o=true;//force open this node , so that sibling is visible
+	return true;
+}
+var levelDown =function(sels,toc) {
+	if (!canLeveldown(sels,toc))return; //move select node descendants one level down
+	var n=sels[0];
+	var cur=toc[n];
+	var next=toc[n+1];
+
+	//force open previous node as it becomes parent of this node
+	var p=prevSibling(n,toc);
+	if (p) toc[p].o=true;
+
+	if (!cur.o) { //do no move descendants if opened
+		if (next && next.d>cur.d) { //has child
+			for (var i=n+1;i<cur.n;i++) {
+				toc[i].d++;
+			}
+		}		
+	}
+	cur.d++;
+	return true;
+}
+var parseDepth=function(s,basedepth,dnow) {
+	var d=0;
+	
+	while (s[0]===" ") {
+		s=s.substr(1);
+		d++;
+	}
+	if (basedepth+d>dnow+1) d=dnow+1-basedepth;
+
+	return {d:basedepth+d,t:s.trim()};
+}
+var addNode =function(toc,n,newnodes,insertbefore) {
+	var d=toc[n].d, basedepth=d, dnow=d;
+	if (!insertbefore) {
+		//toc[n].o=true;
+		if (toc[n].n)	n=toc[n].n ;
+		else (n++);
+	}
+	
+
+	var args=[n,0];
+
+	for (var i=0;i<newnodes.length;i++) {
+		var r=parseDepth(newnodes[i],basedepth,dnow);
+		if (r.t) {
+			args.push(r);
+			dnow=r.d;
+		}
+	}
+	toc.splice.apply(toc,args);
+	return true;
+}
+var deleteNode =function(sels,toc) {
+	if (!canDeleteNode(sels,toc))return; //move select node descendants one level down
+	var n=sels[0];
+	var to=descendantOf(n,toc);
+	var del=to-n;
+	if (n==toc.length-1) del++;
+	toc.splice(n,del);
+	return true;
+}
+
+var canDeleteNode=function(sels,toc) {
+	if (sels.length==0) return false;
+	var n=sels[0];
+	return (sels.length==1 && toc[n].d>0 && toc.length>2);
+}
+var canLevelup=function(sels,toc) {
+	if (sels.length==0) return false;
+	var n=sels[0];
+	return (sels.length==1 && toc[n].d>1);
+}
+var prevSibling=function(n,toc) {
+	var p=n-1;
+	var d=toc[n].d;
+	while (p>0) {
+		if (toc[p].d<d) return 0;
+		if (toc[p].d==d) return p;
+		p--;
+	}
+}
+var canLeveldown=function(sels,toc) {
+	if (sels.length==0) return false;
+	var n=sels[0];
+	return (sels.length==1 && prevSibling(n,toc));
+}
+var enabled=function(sels,toc) {
+	var enabled=[];
+	if (canLeveldown(sels,toc)) enabled.push("leveldown");
+	if (canLevelup(sels,toc)) enabled.push("levelup");
+	if (canDeleteNode(sels,toc)) enabled.push("deletenode");
+	return enabled;
+}
+module.exports={enabled:enabled,levelUp:levelUp,levelDown:levelDown,
+	addNode:addNode,deleteNode:deleteNode,descendantOf:descendantOf};
+},{}],"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\treenode.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+
+var manipulate=require("./manipulate");
+var Controls=require("./controls");
+var AddNode=require("./addnode");
+var treenodehits=null;
+try {
+	treenodehits=require("ksana-simple-api").treenodehits;
+} catch(e) {
+	//don't have ksana libray
+	treenodehits=function(){return 0};
+}
+
+var defaultstyles={
+	selectedcaption:{borderBottom:"1px solid blue",cursor:"pointer",borderRadius:"5px"}
+	,caption:{cursor:"pointer"}
+	,childnode:{left:"0.7em",position:"relative"}
+	,rootnode:{position:"relative"}
+	,folderbutton: {cursor:"pointer",borderRadius:"50%"}
+	,closed:{cursor:"pointer",fontSize:"75%"}
+	,opened:{cursor:"pointer",fontSize:"75%"}	
+	,leaf:{fontSize:"75%"}	
+	,hiddenleaf:{visibility:"hidden"}	
+	,deletebutton:{background:"red",color:"yellow"}
+	,nodelink:{fontSize:"65%",cursor:"pointer"}
+	,hit:{color:"red",fontSize:"65%",cursor:"pointer"}
+	,input:{fontSize:"100%"}
+};
+var styles={};
+
+var TreeNode=React.createClass({
+	propTypes:{
+		toc:React.PropTypes.array.isRequired
+		,opts:React.PropTypes.object
+		,action:React.PropTypes.func.isRequired 
+		,selected:React.PropTypes.array         //selected treenode (multiple)
+		,cur:React.PropTypes.number.isRequired //current active treenode
+		,styles:React.PropTypes.object  //custom style
+		,nodeicons:React.PropTypes.node
+	}
+	,getDefaultProps:function() {
+		return {cur:0,opts:{},toc:[]};
+	}
+	,componentWillMount:function(){
+		this.cloneStyle();
+	}
+	,click:function(e) {
+		ele=e.target;
+		while (ele && !ele.attributes['data-n']) {
+			ele=ele.parentElement;
+		}
+		var n=parseInt(ele.attributes['data-n'].value);
+		this.props.toc[n].o=!this.props.toc[n].o;
+		this.forceUpdate();
+		e.preventDefault();
+    e.stopPropagation();
+	}
+	,select:function(e){
+		if (e.target.nodeName!=="SPAN") return;
+		var datan=e.target.parentElement.attributes['data-n'];
+		if (!datan) return;
+		var n=parseInt(datan.value);
+		var selected=this.props.selected.indexOf(n)>-1;
+		if (selected && this.props.opts.editable) {
+			this.props.action("editcaption",n);
+		} else {
+			this.props.action("select",n,e.ctrlKey);
+		}
+		e.preventDefault();
+    e.stopPropagation();
+	}
+	,cloneStyle:function(newstyles) {
+		styles={};
+		for (var i in defaultstyles) styles[i]=defaultstyles[i];
+		if (newstyles) for (var i in newstyles) styles[i]=newstyles[i];
+	}
+
+	,componentWillReceiveProps:function(nextProps) {
+		if (nextProps.styles && nextProps.styles!==this.props.styles) this.cloneStyle(nextProps.styles)
+	}
+	,componentDidUpdate:function() {
+		if (this.refs.editcaption) {
+			var dom=this.refs.editcaption;
+			dom.focus();
+			dom.selectionStart=dom.value.length;
+		}
+	}
+	,oninput:function(e) {
+		var size=e.target.value.length+2;;
+		if (size<5) size=5;
+		e.target.size=size;
+	}
+
+	,editingkeydown:function(e) {
+		if (e.key=="Enter") {
+			this.props.action("changecaption",e.target.value);	
+			e.stopPropagation();
+		} else this.oninput(e);
+	}
+	,deleteNodes:function() {
+		this.props.action("deletenode");
+	}
+	,renderDeleteButton:function(n) {
+		var childnode=null;
+		var children=manipulate.descendantOf(n,this.props.toc);
+		if (children>n+1) childnode=E("span",{}," "+(children-n)+" nodes");
+		var out=E("button",{onClick:this.deleteNodes,style:styles.deletebutton},"Delete",childnode);
+		return out;
+	}
+	,mouseenter:function(e) {
+		//e.target.style.background="highlight";
+		e.target.style.oldcolor=e.target.style.color;
+		//e.target.style.color="HighlightText";
+		e.target.style.borderRadius="5px";
+		this.lasttarget=e.target;
+	}
+	,mouseleave:function(e) {
+		if (!this.lasttarget)return;
+		//this.lasttarget.style.background="none";
+		this.lasttarget.style.color=this.lasttarget.style.oldcolor;
+	}
+	,renderFolderButton:function(n) {
+		var next=this.props.toc[n+1];
+		var cur=this.props.toc[n];
+		var folderbutton=null;
+		var props={style:styles.closed, onClick:this.click, onMouseEnter:this.mouseenter,onMouseLeave:this.mouseleave};
+		if (cur.o) props.style=styles.opened;
+		if (next && next.d>cur.d && cur.d) { 
+			if (cur.o) folderbutton=E("a",props,this.props.opened||"－");//"▼"
+			else       folderbutton=E("a",props,this.props.closed||"＋");//"▷"
+		} else {
+			folderbutton=E("a",{ style:styles.hiddenleaf},"＊");
+		}
+		return folderbutton;
+	}
+	,renderCaption:function(n,depth) {
+		var cur=this.props.toc[n];
+		var stylename="caption";
+		var defaultCaption="";
+		var t=cur.t;
+		if (this.props.conv) t=this.props.conv(t)||t;
+		if (n==0) defaultCaption=this.props.treename;
+
+		if (this.props.selected.indexOf(n)>-1) stylename="selectedcaption";
+		var caption=null;
+		if (this.props.deleting===n) {
+			caption=this.renderDeleteButton(n);
+		} else if (this.props.editcaption===n) {
+			var size=cur.t.length+2;
+			if (size<5) size=5;
+			caption=E("input",{onKeyDown:this.editingkeydown,style:styles.input,
+				               size:size,ref:"editcaption",defaultValue:t});
+		} else {
+			if (t.length<5) t=t+"  ";
+			var style=JSON.parse(JSON.stringify(styles[stylename]));
+
+			if (this.props.nodeicons) {
+				var nodeicon=getNodeIcon(depth,this.props.nodeicons);
+				if (typeof nodeicon=="string") style.backgroundImage="url("+nodeicon+")";
+				style.backgroundRepeat="no-repeat";
+			}
+
+			caption=E("span",{onMouseEnter:this.mouseenter,onMouseLeave:this.mouseleave,
+				className:this.props.captionClass,style:style,title:n},(defaultCaption||t)+(cur.o?" ":""));
+			//force caption to repaint by appending extra space at the end
+		}
+		return caption;
+	}
+	,renderAddingNode:function(n,above) {
+		if (this.props.adding===n && n) { 
+			return E(AddNode,{insertBefore:above,action:this.props.action});
+		}
+	}
+	,renderEditControls:function(n) {
+		if (!this.props.opts.editable) return;
+		if (this.props.editcaption===n && n>0) {	
+			var enabled=manipulate.enabled([n],this.props.toc);
+			return E(Controls,{action:this.props.action,enabled:enabled});
+		} 
+	}
+	,renderItem:function(e,idx){
+		var t=this.props.toc[e];
+		var props={};
+		for (var i in this.props) {
+			props[i]=this.props[i];
+		}
+		var opened=t.o?"o":"";
+		props.key="k"+e;
+		props.cur=e;
+		return E(TreeNode,props);
+	}
+	,clickhit:function(e) {
+		var n=parseInt(e.target.dataset.n);
+		this.props.action("hitclick",n);
+		e.preventDefault();
+		e.stopPropagation();
+	}
+	,renderHit:function(hit,n) {
+		if (!hit) return;
+		return E("span",{onClick:this.clickhit,style:styles.hit,"data-n":n,className:"treenode_hit",
+			onMouseEnter:this.mouseenter,onMouseLeave:this.mouseleave},hit);
+	}
+	,render:function() {
+		if (this.props.toc.length===0) return E("span",{},"");
+		var n=this.props.cur;
+		var cur=this.props.toc[n];
+		var stylename="childnode",children=[];
+		var selected=this.props.selected.indexOf(n)>-1;
+		var nodeicon="";
+		if (this.props.nodeicons&&typeof this.props.nodeicons[0]!=="string"){
+			var nodeicon=getNodeIcon(cur.d,this.props.nodeicons);	
+		}
+		
+		var depthdeco=renderDepth(cur.d,this.props.opts)
+		if (cur.d==0) stylename="rootnode";
+		var adding_before_controls=this.renderAddingNode(-n,true);
+		var adding_after_controls=this.renderAddingNode(n);
+		var editcontrols=this.renderEditControls(n);
+		var folderbutton=this.renderFolderButton(n);
+		var caption=this.renderCaption(n,cur.d);
+
+		if (cur.o) children=enumChildren(this.props.toc,n);
+
+		var extracomponent=this.props.opts.onNode&& this.props.opts.onNode(cur,selected,n,this.props.editcaption);
+		if (this.props.deleting>-1) extracomponent=null;
+		if (this.props.deleting>-1) editcontrols=null;
+		var hitcount=treenodehits(this.props.toc,this.props.hits,n);
+
+		return E("div",{onClick:this.select,"data-n":n,style:styles[stylename],className:"treenode_lv"+cur.d},
+
+			   adding_before_controls,
+			   folderbutton,nodeicon,depthdeco,
+			   editcontrols,
+			   caption,
+			   this.renderHit(hitcount,n),
+			   extracomponent,
+			   adding_after_controls,
+			   children.map(this.renderItem));
+	}
+});
+
+var getNodeIcon=function(depth,nodeicons) {
+	if (!nodeicons) return;
+	if (!nodeicons[depth]) return nodeicons[nodeicons.length-1];//return last icon
+	return nodeicons[depth];
+}
+var ganzhi="　甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥";
+
+var renderDepth=function(depth,opts) {
+  var out=[];
+  if (opts&&opts.tocstyle=="ganzhi") {
+    return E("span", null, ganzhi[depth].trim()+" ");
+  } else {
+    if (opts&&opts.numberDepth && depth) return E("span", null, depth, ".")
+    else return null;
+  }
+  return null;
+};
+
+
+var enumChildren=function(toc,cur) {
+    var children=[];
+    if (!toc || !toc.length || toc.length==1) return children;
+    thisdepth=toc[cur].d||toc[cur].depth;
+    if (cur==0) thisdepth=0;
+    if (cur+1>=toc.length) return children;
+    if ((toc[cur+1].d||toc[cur+1].depth)!= 1+thisdepth) {
+    	return children;  // no children node
+    }
+    var n=cur+1;
+    var child=toc[n];
+    
+    while (child) {
+      children.push(n);
+      var next=toc[n+1];
+      if (!next) break;
+      if ((next.d||next.depth)==(child.d||child.depth)) {
+        n++;
+      } else if ((next.d||next.depth)>(child.d||child.depth)) {
+        n=child.n||child.next;
+      } else break;
+      if (n) child=toc[n];else break;
+    }
+    return children;
+}
+module.exports=TreeNode;
+},{"./addnode":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\addnode.js","./controls":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\controls.js","./manipulate":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\manipulate.js","ksana-simple-api":"ksana-simple-api","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\downloader.js":[function(require,module,exports){
 
 var userCancel=false;
 var files=[];

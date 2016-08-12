@@ -5,10 +5,11 @@ var callback="loadscriptcb";
 var jin=fs.readFileSync("../mpps_lecture/jin.txt","utf8");
 var lun=fs.readFileSync("../mpps_lecture/lun.txt","utf8");
 var ndef=fs.readFileSync("../mpps_lecture/ndef.txt","utf8");
+var kepan=fs.readFileSync("../mpps_lecture/kepan.txt","utf8").split("\n");
+
 
 jin=callback+"(`"+jin+"`)";
 lun=callback+"(`"+lun+"`)";
-
 
 var convertNdef=function(lines){
 	var arr=[], out={},juan=0,lastnoteid="",lastnote="",lastjuan="",stop=false;
@@ -40,9 +41,16 @@ var convertNdef=function(lines){
 	arr.push(out);
 	return arr;
 }
+
+kepan=kepan.map(function(k){
+	var r=k.split("\t");
+	return JSON.stringify({d:parseInt(r[0])+1,t:r[1],l:r[2]});
+})
+kepan.unshift(JSON.stringify({d:0,t:"大智度論講義"}));
 ndefjsons=convertNdef(ndef.split(/\r?\n/));
 fs.writeFileSync("data/jin.js",jin,"utf8");
 fs.writeFileSync("data/lun.js",lun,"utf8");
+fs.writeFileSync("data/kepan.js",'loadscriptcb(['+kepan.join(",\n")+'\n]);',"utf8");
 ndefjsons.map(function(json,idx){
 	fs.writeFileSync("data/ndef"+idx+".js",callback+"("+JSON.stringify(json,"","" )+")","utf8");	
 })
