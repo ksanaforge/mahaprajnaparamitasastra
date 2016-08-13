@@ -2,8 +2,8 @@
   
 */
 var actionhandler=null;
-var notepat=/#([0-9.]+)/g;
-var parapat=/\^([0-9.]+)/g;
+var notepat=/#(\d+\.\d+)/g;
+var parapat=/\^(\d+\.\d+)/g;
 var linkpat=/@([A-Za-z0-9]+)/g;
 var kepanpat=/%(\d+\.\d+) (.*)%?/g;
 var boldpat=/\{([^k]+?)\}/g;

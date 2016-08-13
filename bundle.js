@@ -35,8 +35,8 @@ module.exports=maincomponent;
   
 */
 var actionhandler=null;
-var notepat=/#([0-9.]+)/g;
-var parapat=/\^([0-9.]+)/g;
+var notepat=/#(\d+\.\d+)/g;
+var parapat=/\^(\d+\.\d+)/g;
 var linkpat=/@([A-Za-z0-9]+)/g;
 var kepanpat=/%(\d+\.\d+) (.*)%?/g;
 var boldpat=/\{([^k]+?)\}/g;
@@ -11353,15 +11353,13 @@ var ControlPanel = React.createClass({
     this.context.action("gokepan",node.l);
   }
   ,render:function(){
-  	return E("div",{style:[this.props.style,styles.toc]},
+  	return E("div",{style:this.props.style},
       //E("span",{},"Search"),
       //E("input",{}),
       E(TreeToc,{toc:this.state.toc,onSelect:this.onSelect}));
   }
 });
-var styles={
-  toc:{fontSize:"75%"}
-}
+
 module.exports=ControlPanel;
 },{"ksana2015-treetoc":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js":[function(require,module,exports){
 /* jsonp loading text dynamically */
