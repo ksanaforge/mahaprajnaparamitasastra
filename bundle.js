@@ -43,7 +43,7 @@ var patterns={
  bold:/\{([^k]+?)\}/g,
  kai:/\{k(.+?)k\}/g,
  pagebreak:/~(\d+)/g,
- taisho:/t(\d+)p(\d+)([a-c])?/g
+ taisho:/t(\d+)p(\d+)([a-c])?/
 }
 
 var onTagClick=function(e){
