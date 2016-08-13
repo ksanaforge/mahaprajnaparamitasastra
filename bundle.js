@@ -11210,7 +11210,7 @@ var CMView=React.createClass({
 			var pos=cm.doc.posFromIndex(at);
 			//scroll to last line , so that the paragraph will be at top
 			cm.scrollIntoView({line:cm.doc.lineCount()-1,ch:0})
-			pos.line--;
+			if (pos.line) pos.line--;
 			cm.scrollIntoView(pos);
 		}
 	}
@@ -11353,12 +11353,15 @@ var ControlPanel = React.createClass({
     this.context.action("gokepan",node.l);
   }
   ,render:function(){
-  	return E("div",{style:this.props.style},
+  	return E("div",{style:[this.props.style,styles.toc]},
       //E("span",{},"Search"),
       //E("input",{}),
       E(TreeToc,{toc:this.state.toc,onSelect:this.onSelect}));
   }
 });
+var styles={
+  toc:{fontSize:"75%"}
+}
 module.exports=ControlPanel;
 },{"ksana2015-treetoc":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js":[function(require,module,exports){
 /* jsonp loading text dynamically */
@@ -11629,7 +11632,8 @@ var modemain = React.createClass({
 });
 var styles={
   topcontainer:{display:"flex"},
-  controls:{flex:1,background:'gray',height:"100%",overflowY:"scroll",overflowX:"hidden"},
+  controls:{flex:1,background:'gray',fontSize:"75%",
+  height:"100%",overflowY:"scroll",overflowX:"hidden"},
   body:{flex:4},
 }
 module.exports=modemain;
