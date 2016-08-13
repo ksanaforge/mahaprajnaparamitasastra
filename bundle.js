@@ -35,24 +35,39 @@ module.exports=maincomponent;
   
 */
 var actionhandler=null;
-var notepat=/#(\d+\.\d+)/g;
-var parapat=/\^(\d+\.\d+)/g;
-var linkpat=/@([A-Za-z0-9]+)/g;
-var kepanpat=/%(\d+\.\d+) (.*)%?/g;
-var boldpat=/\{([^k]+?)\}/g;
-var kaipat=/\{k(.+?)k\}/g
-var pgpat=/~(\d+)/g;
-var taishotext=/t(\d+)p(\d+)([a-c])?/
+var patterns={
+ footnote:/#(\d+\.\d+)/g,
+ paragraph:/\^(\d+\.\d+)/g,
+ link:/@([A-Za-z0-9]+)/g,
+ kepan:/%(\d+\.\d+) (.*)%?/g,
+ bold:/\{([^k]+?)\}/g,
+ kai:/\{k(.+?)k\}/g,
+ pagebreak:/~(\d+)/g,
+ taisho:/t(\d+)p(\d+)([a-c])?/g
+}
+
 var onTagClick=function(e){
 	var cls=e.target.className;  
 	if (cls==="paragraph") {
 		actionhandler("gopara",e.target.innerHTML);
 	} else if (cls==="link") {
-		var m=e.target.innerHTML.match(taishotext);
+		var m=e.target.innerHTML.match(patterns.taisho);
 		if (m) {
 			var vol=m[1],pg=m[2],col=m[3];
 			window.open("http://www.cbeta.org/cgi-bin/goto.pl?book=T&vol="+vol+"&page="+pg+"&col="+col);
 		}
+	}
+}
+var onMouseOver=function(e){
+	var cls=e.target.className;  
+	if (cls==="footnote") {
+		actionhandler("showfootnote",{x:e.pageX,y:e.pageY,note:e.target.innerHTML});
+	}
+}
+var onMouseOut=function(e){
+	var cls=e.target.className;  
+	if (cls==="footnote") {
+		actionhandler("hidefootnote",{x:e.pageX,y:e.pageY,note:e.target.innerHTML});
 	}
 }
 var createMarker=function(classname,tag) {
@@ -62,12 +77,20 @@ var createMarker=function(classname,tag) {
 		element.onclick=onTagClick;
 		return element;
 }
-var markLines=function(doc,from,to,ndefs){
+var createHover=function(classname,tag){
+		var element=document.createElement("SPAN");
+		element.className=classname;
+		element.innerHTML=tag;
+		element.onmouseover=onMouseOver;
+		element.onmouseout=onMouseOut;
+		return element;	
+}
+var markLines=function(doc,from,to,opts){
 	var M=doc.findMarks({line:from,ch:0},{line:to,ch:65536});
 	M.forEach(function(m){m.clear()});
-
+	opts.keepold=true;
 	for (var i=from;i<to+1;i++) {
-		markLine(doc, i ,{keepold:true,ndefs});
+		markLine(doc, i ,opts);
 	}
 }
 var markAllLine=function(doc){
@@ -78,6 +101,9 @@ var markAllLine=function(doc){
 		markLine(doc,i,{keepold:true});
 	}
 }
+var makeFootnote=function(id){
+	return "#"+id;
+}
 var makeParagraph=function(id) {
 	return "^"+id;
 }
@@ -86,14 +112,14 @@ var makeKepan=function(id) {
 }
 var getParagraph=function(content){
 	var out=[];
-	content.replace(parapat,function(m,m1){
+	content.replace(patterns.paragraph,function(m,m1){
 		out.push(m1);
 	});
 	return out;
 }
 var getNotes=function(line){
 	var out=[];
-	line.replace(notepat,function(m,m1){
+	line.replace(patterns.footnote,function(m,m1){
 		out.push(m1);
 	});
 	return out;
@@ -103,15 +129,16 @@ var getNoteFile=function(note){
 }
 var notewidgets=[];
 
-var markNote=function(doc,i,line,ndefs){
+var markNote=function(doc,i,line){
 	var notes=[];
-	line.replace(notepat,function(m,m1,idx){
-		var element=createMarker("footnote",m1);
+	line.replace(patterns.footnote,function(m,m1,idx){
+		var element=createHover("footnote",m1);
 		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 			{replacedWith:element});
 		element.marker=marker;
 		notes.push(m1);
 	});
+	/*
 	clearNote();
 	for (var j=0;j<notes.length;j++) {
 		var suffix="_even";
@@ -119,10 +146,13 @@ var markNote=function(doc,i,line,ndefs){
 		var element=createMarker("ndef ndef"+suffix,notes[j]+" "+ndefs[notes[j]]);
 		notewidgets.push(doc.addLineWidget(i,element));
 	}
+	*/
 }
+/*
 var clearNote=function(){
 	notewidgets.map(function(item){item.clear()});	
 }
+*/
 var markLine=function(doc,i, opts) {
 	if (i>doc.lineCount())return;
 	if (!opts) opts={};
@@ -132,8 +162,8 @@ var markLine=function(doc,i, opts) {
 		var M=doc.findMarks({line:i,ch:0},{line:i,ch:65536});
 		M.forEach(function(m){m.clear()});		
 	}
-	if (i==activeline) {
-		line.replace(pgpat,function(m,pb,idx){
+	if (i==activeline || opts.pagebreak) {
+		line.replace(patterns.pagebreak,function(m,pb,idx){
 			var element=createMarker("pagebreak",pb);
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{replacedWith:element});
@@ -146,23 +176,23 @@ var markLine=function(doc,i, opts) {
 		});
 	}
 
-	line.replace(parapat,function(m,m1,idx){
+	line.replace(patterns.paragraph,function(m,m1,idx){
 		var element=createMarker("paragraph",m1);
 		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 			{replacedWith:element});
 		element.marker=marker;
 	});
 
-	if (i==activeline) {
-		markNote(doc,i,line,opts.ndefs);
+	if (i==activeline || opts.note) {
+		markNote(doc,i,line);
 	} else {
-		line.replace(notepat,function(m,m1,idx){
+		line.replace(patterns.footnote,function(m,m1,idx){
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{className:"hide"});
 		});		
 	}
 
-	line.replace(boldpat,function(m,m1,idx){
+	line.replace(patterns.bold,function(m,m1,idx){
 		var marker=doc.markText({line:i,ch:idx+1},{line:i,ch:idx+m.length-1},
 			{className:"bold"});
 		//hide control code
@@ -170,29 +200,29 @@ var markLine=function(doc,i, opts) {
 		doc.markText({line:i,ch:idx+m.length-1},{line:i,ch:idx+m.length},{className:"hide"});
 	});
 //TODO : deal with cross line kai
-	line.replace(kaipat,function(m,m1,idx){
+	line.replace(patterns.kai,function(m,m1,idx){
 		var marker=doc.markText({line:i,ch:idx+2},{line:i,ch:idx+m.length-2},
 			{className:"kai"});
 		//hide control code
 		doc.markText({line:i,ch:idx},{line:i,ch:idx+2},{className:"hide"});
 		doc.markText({line:i,ch:idx+m.length-2},{line:i,ch:idx+m.length},{className:"hide"});
 	});
-	if (i==activeline) {
-		line.replace(linkpat,function(m,m1,idx){
+	if (i==activeline || opts.link) {
+		line.replace(patterns.link,function(m,m1,idx){
 			var element=createMarker("link",m1);
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{replacedWith:element});
 			element.marker=marker;
 		});
 	} else {
-		line.replace(linkpat,function(m,m1,idx){
+		line.replace(patterns.link,function(m,m1,idx){
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{className:"hide"});
 		});
 	}
 
 
-	line.replace(kepanpat,function(m,d,title,idx){
+	line.replace(patterns.kepan,function(m,d,title,idx){
 		var element=createMarker("kepan",d);
 		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
 			{replacedWith:element});
@@ -208,8 +238,9 @@ var setActionHandler=function(_actionhandler){
 	actionhandler=_actionhandler;
 }
 module.exports={markAllLine,markLine,markLines
-	,clearNote,getNotes,getNoteFile
-	,getParagraph,makeParagraph,makeKepan
+	,getNotes,getNoteFile
+	,getParagraph,makeParagraph,makeKepan,makeFootnote
+	,patterns
 	,setActionHandler};
 },{}],"C:\\ksana2015\\node_modules\\codemirror\\addon\\dialog\\dialog.js":[function(require,module,exports){
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
@@ -11161,15 +11192,17 @@ var TwoColumnMode=require("./src/twocolumnmode");
 module.exports={model,TwoColumnMode};
 },{"./src/model":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\model.js","./src/twocolumnmode":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\twocolumnmode.js"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\cmview.js":[function(require,module,exports){
 var React=require("react");
+var ReactDOM=require("react-dom");
 var E=React.createElement;
 var PT=React.PropTypes;
 var CodeMirror=require("ksana-codemirror").Component;
 var TopRightMenu=require("./toprightmenu");
+var NotePopup=require("./notepopup");
 require("./loadfile");
 
 var CMView=React.createClass({
 	getInitialState:function(){
-		return {data:this.props.data||"empty"}
+		return {data:this.props.data||"empty",popupX:0,popupY:0,popupText:""}
 	}
 	,contextTypes:{
 		store:PT.object,
@@ -11185,6 +11218,41 @@ var CMView=React.createClass({
 		this.context.store.listen("gopara",this.onGoPara,this);
 		this.context.store.listen("gokepan",this.onGoKepan,this);
 		this.context.store.listen("loaded",this.onLoaded,this);
+		this.context.store.listen("showfootnote",this.showfootnote,this);
+		this.context.store.listen("hidefootnote",this.hidefootnote,this);
+	}
+	,hasFootnoteInScreen:function(note){
+		var screentext=this.getScreenText();
+		var rule=this.getDocRule();
+		var n=rule.makeFootnote(note);
+		var m=screentext.match(rule.patterns.footnote);
+		if (m) {
+			var at=m.indexOf(n);
+			return at>-1;
+		}	
+		return false;
+	}
+	,popupFootnote:function(){
+			var rule=this.getDocRule();
+			var ndeffile=rule.getNoteFile(this.note);
+			var ndefs=this.context.getter("fileSync",ndeffile);
+			this.setState({popupX:this.popupX,popupY:this.popupY,
+				popupW:this.popupW,popupH:this.popupH,
+				popupText:ndefs[this.note]})
+	}
+	,showfootnote:function(opts){
+		if (this.hasFootnoteInScreen(opts.note)){
+			var n=ReactDOM.findDOMNode(this).getBoundingClientRect();
+			this.popupX=opts.x-n.left; this.popupY=opts.y-n.top;
+			this.popupW=n.width; this.popupH=n.height;
+			this.note=opts.note;
+			this.loadNote(opts.note);
+		}
+	}
+	,hidefootnote:function(note){
+		if (this.hasFootnoteInScreen(note)){
+
+		}
 	}
 	,componentDidMount:function(){
 		this.defaultListeners();
@@ -11219,7 +11287,7 @@ var CMView=React.createClass({
 	*/
 	,onGoKepan:function(kepan) {
 		var rule=this.getDocRule();
-		var kepantext=rule.makeKepan(kepan);
+		var kepantext=rule.makeKepan(kepan+" ");//prevent 37.1 jump to 37.10
 		this.scrollToText(kepantext);
 	}
 	,onGoPara:function(para){
@@ -11230,8 +11298,7 @@ var CMView=React.createClass({
 	,onNDefLoaded:function(arg){
 		this.context.store.unlistenAll(this);
 		this.defaultListeners();
-
-		this.markViewport();
+		this.popupFootnote();
 	}
 	,markViewport:function(){
 		var cm=this.refs.cm.getCodeMirror();
@@ -11239,29 +11306,13 @@ var CMView=React.createClass({
 		this.vpfrom=-1;//force onViewport
 		this.onViewportChange(cm,vp.from,vp.to);
 		var rule=this.getDocRule();
-		rule.setActionHandler(this.context.action);
 	}
-	,getNoteFile:function(cm,nline){
-		if (!nline&&nline!==0) {
-			var c=cm.doc.getCursor();
-			nline=c.line;
-		}
+	,loadNote:function(note){
 		var rule=this.getDocRule();
-		if (!rule)return;
-		var line=cm.doc.getLine(nline);
-		var notes=rule.getNotes(line);
-		if (notes&&notes.length) {
-			return rule.getNoteFile(notes[0]);
-		}
-	}
-	,loadNote:function(cm,line){
-		var filename=this.getNoteFile(cm,line);
-		if (!filename) {
-			this.markViewport();
-			return;
-		}
-		if (this.context.getter("fileSync",filename)){
-			this.markViewport();
+		var filename=rule.getNoteFile(note);
+		var d=this.context.getter("fileSync",filename);
+		if (d){
+			this.popupFootnote();
 		} else {
 			this.context.store.unlistenAll(this);
 			this.context.store.listen("loaded",this.onNDefLoaded,this);
@@ -11269,9 +11320,9 @@ var CMView=React.createClass({
 		}
 	}
 	,onCursorActivity:function(cm){
-		var c=cm.doc.getCursor();
-		if (this.activeline==c.line) return;
-		this.loadNote(cm,c.line);
+		//var c=cm.doc.getCursor();
+		//if (this.activeline==c.line) return;
+		//this.loadNote(cm,c.line);
 	}
 	,onSetDoc:function(side,filename){
 		this.context.getter("setDoc",side,filename);
@@ -11288,13 +11339,16 @@ var CMView=React.createClass({
 	,onLoaded:function(res){
 		if (res.side!==this.props.side) return;
 		var cm=this.refs.cm.getCodeMirror();
+
+		var rule=this.getDocRule();
+		rule.setActionHandler(this.context.action);
 		cm.setValue(res.data);
 	}
 	,onViewportChange:function(cm,from,to) {
 		var rule=this.getDocRule();
 		if (!rule)return;
 		if (this.vpfrom==from && this.vpto==to)return;
-		
+
 		var clearMarksBeyondViewport=function(f,t){
 			var M=cm.doc.findMarks({line:0,ch:0},{line:f-1,ch:65536});
 			M.forEach(function(m){m.clear()});
@@ -11305,18 +11359,22 @@ var CMView=React.createClass({
 
 		if (this.vptimer) clearTimeout(this.vptimer);
 		this.vptimer=setTimeout(function(){ //marklines might trigger viewport change
-			rule.clearNote();			
+			//rule.clearNote();
 			var vp=cm.getViewport(); //use current viewport instead of from,to
-			clearMarksBeyondViewport(vp.from,vp.to+20);
-			var ndeffile=this.getNoteFile(cm);
-			var ndefs=this.context.getter("fileSync",ndeffile);
-			rule.markLines(cm,vp.from,vp.to+20,ndefs);
+			clearMarksBeyondViewport(vp.from,vp.to+10);
+			rule.markLines(cm,vp.from,vp.to+10,{note:true,pagebreak:true,link:true});
 			this.vpfrom=vp.from,this.vpto=vp.to;
+
 		}.bind(this),500); 
 		//might be big enough, otherwise onViewport will be trigger again, causing endless loop
 	}
 	,render:function(){
+		var rule=this.getDocRule();
 		return E("div",{},
+			E(NotePopup,{x:this.state.popupX,y:this.state.popupY,
+				w:this.state.popupW,h:this.state.popupH,
+				rule,
+				text:this.state.popupText}),
 			E(TopRightMenu,{side:this.props.side,onSetDoc:this.onSetDoc,
 				buttons:this.props.docs,selected:this.props.doc}),
 	  	E(CodeMirror,{ref:"cm",value:"",theme:"ambiance",readOnly:true,
@@ -11326,7 +11384,7 @@ var CMView=React.createClass({
 	}
 })
 module.exports=CMView;
-},{"./loadfile":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js","./toprightmenu":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\toprightmenu.js","ksana-codemirror":"C:\\ksana2015\\node_modules\\ksana-codemirror\\src\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\controlpanel.js":[function(require,module,exports){
+},{"./loadfile":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js","./notepopup":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\notepopup.js","./toprightmenu":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\toprightmenu.js","ksana-codemirror":"C:\\ksana2015\\node_modules\\ksana-codemirror\\src\\index.js","react":"react","react-dom":"react-dom"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\controlpanel.js":[function(require,module,exports){
 var React=require("react");
 var E=React.createElement;
 var PT=React.PropTypes;
@@ -11526,7 +11584,67 @@ var store={
 }
 
 module.exports={ action, store, getter, registerGetter, unregisterGetter, hasGetter};
-},{}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\toprightmenu.js":[function(require,module,exports){
+},{}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\notepopup.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var PT=React.PropTypes;
+var CodeMirror=require("ksana-codemirror").Component;
+
+var NotePopup=React.createClass({
+	getInitialState:function(){
+		return {close:true};
+	},
+	propTypes:{
+		rule:PT.object.isRequired,
+		x:PT.number.isRequired,
+		y:PT.number.isRequired,
+		text:PT.string.isRequired
+	},
+	close:function(){
+		this.setState({close:true});
+	},
+	componentWillReceiveProps:function(nextProps){
+		if (nextProps.text) this.setState({close:false});
+	},
+	componentDidUpdate:function(){
+		var cm=this.refs.cm;
+		if (!cm)return;
+		cm=cm.getCodeMirror();
+		this.props.rule.markLines(cm,0,cm.lineCount()-1,
+			{note:true,pagebreak:true,link:true});
+	},
+	render:function(){
+		if (!this.props.text||this.props.x<0 ||this.state.close){
+			return E("div",{});
+		}
+		var style=JSON.parse(JSON.stringify(styles.viewcontrols));
+		style.left=this.props.x;
+		style.top=this.props.y;
+		style.height=150;
+		style.width=320;
+		if (style.left+style.width>this.props.w) {
+				style.left-=style.left+style.width-this.props.w+20;
+		} 
+		if (style.top+style.height>this.props.h) {
+				style.top-=style.top+style.height-this.props.h+20;
+		} 
+		return	E("div",{style:styles.container},
+				E("div",{style},
+					E("button",{style:styles.button,onClick:this.close},"x"),
+					E(CodeMirror,{ref:"cm",readOnly:true,value:this.props.text})
+				)
+		)
+	}
+})
+
+var styles={
+	button:{position:"absolute",right:0,
+	fontSize:20,borderRadius:"50%",zIndex:103,opacity:0.5},
+	container:{background:"blue",position:"relative",zIndex:101},
+	viewcontrols:{position:"absolute"} //for scrollbar
+}
+module.exports=NotePopup;
+},{"ksana-codemirror":"C:\\ksana2015\\node_modules\\ksana-codemirror\\src\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\toprightmenu.js":[function(require,module,exports){
 var React=require("react");
 var E=React.createElement;
 var PT=React.PropTypes;
