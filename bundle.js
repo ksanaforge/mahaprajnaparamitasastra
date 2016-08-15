@@ -11414,7 +11414,8 @@ var ControlPanel = React.createClass({
   	return E("div",{style:this.props.style},
       //E("span",{},"Search"),
       //E("input",{}),
-      E(TreeToc,{toc:this.state.toc,onSelect:this.onSelect}));
+      E(TreeToc,{opts:{rainbow:true},
+        toc:this.state.toc,onSelect:this.onSelect}));
   }
 });
 
@@ -12108,6 +12109,7 @@ var manipulate=require("./manipulate");
 var Controls=require("./controls");
 var AddNode=require("./addnode");
 var treenodehits=null;
+
 try {
 	treenodehits=require("ksana-simple-api").treenodehits;
 } catch(e) {
@@ -12128,7 +12130,7 @@ var defaultstyles={
 	,deletebutton:{background:"red",color:"yellow"}
 	,nodelink:{fontSize:"65%",cursor:"pointer"}
 	,hit:{color:"red",fontSize:"65%",cursor:"pointer"}
-	,input:{fontSize:"100%"}
+	,input:{fontSize:"100%"}	
 };
 var styles={};
 
@@ -12329,8 +12331,20 @@ var TreeNode=React.createClass({
 		if (this.props.deleting>-1) extracomponent=null;
 		if (this.props.deleting>-1) editcontrols=null;
 		var hitcount=treenodehits(this.props.toc,this.props.hits,n);
+		var s=styles[stylename];
+		if (this.props.opts.rainbow&& stylename=="childnode") {
+			s=JSON.parse(JSON.stringify(styles[stylename]));
+			s.left="";//no ident
+			var angle=(cur.d+1)*30;
+			if (cur.f) {
+				s.fontFamily=cur.f;
+			} else {
+				s.fontFamily=this.props.opts.font||"system";
+			}
+			s.background="hsl("+angle+",40%,50%)";
+		}
 
-		return E("div",{onClick:this.select,"data-n":n,style:styles[stylename],className:"treenode_lv"+cur.d},
+		return E("div",{onClick:this.select,"data-n":n,style:s,className:"treenode_lv"+cur.d},
 
 			   adding_before_controls,
 			   folderbutton,nodeicon,depthdeco,

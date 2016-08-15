@@ -44,7 +44,10 @@ var convertNdef=function(lines){
 
 kepan=kepan.map(function(k){
 	var r=k.split("\t");
-	return JSON.stringify({d:parseInt(r[0])+1,t:r[1],l:r[2]});
+	//depth, text(caption), link(target), f(font)
+	var o={d:parseInt(r[0])+1,t:r[1],l:r[2]};
+	if (r[3])o.f="DFKai-SB";
+	return JSON.stringify(o);
 })
 kepan.unshift(JSON.stringify({d:0,t:"大智度論講義"}));
 ndefjsons=convertNdef(ndef.split(/\r?\n/));
