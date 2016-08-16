@@ -11270,10 +11270,13 @@ var CMView=React.createClass({
 		if (i>-1) {
 			var pos=cm.posFromIndex(i+cm.indexFromPos({line:vp.from,ch:1}));
 			var marks=cm.findMarks(pos,{line:pos.line,ch:pos.ch+link.length});
-			if (marks.length && marks[0].replacedWith) {
-				this.leavingClass=marks[0].replacedWith.className;
-				this.leavingFrom=marks[0];
-				marks[0].replacedWith.className="link_visited";
+			if (marks&&marks.length) for (var i=0;i<marks.length;i++) {
+				var m=marks[i];
+				if (m.replacedWith) {
+					this.leavingClass=m.replacedWith.className;
+					this.leavingFrom=m;
+					m.replacedWith.className="link_visited";
+				}				
 			}
 		}
 	}
@@ -11392,7 +11395,6 @@ var CMView=React.createClass({
 	,onViewportChange:function(cm,from,to) {
 		var rule=this.getDocRule();
 		if (!rule)return;
-		if (this.vpfrom==from && this.vpto==to)return;
 
 		var clearMarksBeyondViewport=function(f,t){
 			var M=cm.doc.findMarks({line:0,ch:0},{line:f-1,ch:65536});
@@ -11403,14 +11405,15 @@ var CMView=React.createClass({
 		}		
 
 		if (this.vptimer) clearTimeout(this.vptimer);
-		this.vptimer=setTimeout(function(){ //marklines might trigger viewport change
+		this.vptimer=setTimeout(function(){ //marklines might trigger viewport change			
 			//rule.clearNote();
 			var vp=cm.getViewport(); //use current viewport instead of from,to
-			clearMarksBeyondViewport(vp.from,vp.to+10);
-			rule.markLines(cm,vp.from,vp.to+10,{note:true,pagebreak:true,link:true});
-			this.vpfrom=vp.from,this.vpto=vp.to;
+			if (Math.abs(this.vpfrom-vp.from)<2)return;
 
-		}.bind(this),500); 
+			//clearMarksBeyondViewport(vp.from,vp.to+10);
+			rule.markLines(cm,vp.from,vp.to+20,{note:true,pagebreak:true,link:true});
+			this.vpfrom=vp.from,this.vpto=vp.to;
+		}.bind(this),400); 
 		//might be big enough, otherwise onViewport will be trigger again, causing endless loop
 	}
 	,render:function(){
