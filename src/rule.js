@@ -10,7 +10,8 @@ var patterns={
  bold:/\{([^k]+?)\}/g,
  kai:/\{k(.+?)k\}/g,
  pagebreak:/~(\d+)/g,
- taisho:/t(\d+)p(\d+)([a-c])?/
+ taisho:/t(\d+)p(\d+)([a-c])?/,
+ yinshun_note:/y([A-Z][0-9]+)p[0-9]+/
 }
 
 var onTagClick=function(e){
@@ -23,15 +24,25 @@ var onTagClick=function(e){
 			var vol=m[1],pg=m[2],col=m[3];
 			window.open("http://www.cbeta.org/cgi-bin/goto.pl?book=T&vol="+vol+"&page="+pg+"&col="+col);
 		}
+		m=e.target.innerHTML.match(patterns.yinshun_note);
+		if (m) {
+			window.open("http://ya.ksana.tw/mpps_yinshun_note_img/"+m[1][0]+"/"+m[1]+".jpg");
+		}
 	}
 }
+var hovertimer=null;
 var onMouseOver=function(e){
-	var cls=e.target.className;  
+	var cls=e.target.className;
 	if (cls==="footnote") {
-		actionhandler("showfootnote",{x:e.pageX,y:e.pageY,note:e.target.innerHTML});
+		var x=e.pageX,y=e.pageY,note=e.target.innerHTML;
+		hovertimer=setTimeout(function(){//prevent fly over
+			actionhandler("showfootnote",{x,y,note});
+		},300);
 	}
 }
 var onMouseOut=function(e){
+	clearTimeout(hovertimer);
+
 	var cls=e.target.className;  
 	if (cls==="footnote") {
 		actionhandler("hidefootnote",{x:e.pageX,y:e.pageY,note:e.target.innerHTML});
