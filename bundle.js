@@ -11409,8 +11409,10 @@ var CMView=React.createClass({
 			//rule.clearNote();
 			var vp=cm.getViewport(); //use current viewport instead of from,to
 			if (Math.abs(this.vpfrom-vp.from)<2)return;
-
+			
+			//this will trigger another onViewport
 			//clearMarksBeyondViewport(vp.from,vp.to+10);
+
 			rule.markLines(cm,vp.from,vp.to+20,{note:true,pagebreak:true,link:true});
 			this.vpfrom=vp.from,this.vpto=vp.to;
 		}.bind(this),400); 
@@ -11437,10 +11439,11 @@ var React=require("react");
 var E=React.createElement;
 var PT=React.PropTypes;
 var TreeToc=require("ksana2015-treetoc").Component;
-
+var TocResult=require("./tocresult");
+var InputBox=require("./inputbox");
 var ControlPanel = React.createClass({
   getInitialState:function() {
-    return {filename:"jin",toc:[]};
+    return {filename:"jin",toc:[],tofind:"",order:0};
   }
   ,contextTypes:{
   	store:PT.object.isRequired,
@@ -11458,17 +11461,82 @@ var ControlPanel = React.createClass({
   ,onSelect:function(ctx,node,i,nodes){
     this.context.action("gokepan",node.l);
   }
+  ,renderToc:function(){
+    if(this.state.tofind.trim()){
+      return E(TocResult,{tofind:this.state.tofind,toc:this.state.toc
+        ,order:this.state.order
+        ,onSelect:this.onSelect});
+    }else{
+      return E(TreeToc,{opts:{rainbow:true},
+        toc:this.state.toc,onSelect:this.onSelect});
+    }
+  }
+  ,onInputChanged:function(tofind,order){
+    this.setState({tofind,order});
+  }
   ,render:function(){
   	return E("div",{style:this.props.style},
-      //E("span",{},"Search"),
-      //E("input",{}),
-      E(TreeToc,{opts:{rainbow:true},
-        toc:this.state.toc,onSelect:this.onSelect}));
+      E(InputBox,{onInputChanged:this.onInputChanged}), 
+      E("br"),
+      E("br"),
+      this.renderToc()
+    );
   }
 });
 
 module.exports=ControlPanel;
-},{"ksana2015-treetoc":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js":[function(require,module,exports){
+},{"./inputbox":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\inputbox.js","./tocresult":"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\tocresult.js","ksana2015-treetoc":"C:\\ksana2015\\node_modules\\ksana2015-treetoc\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\inputbox.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var PT=React.PropTypes;
+
+var InputBox=React.createClass({
+	getInitialState:function(){
+		return {tofind:"",order:1}
+	}
+	,propTypes:{
+		onInputChanged:PT.func.isRequired
+	}
+  ,onChange:function(e){
+    var tofind=e.target.value;
+    this.setState({tofind});
+    clearTimeout(this.timer);
+    this.timer=setTimeout(function(){
+    	this.props.onInputChanged(this.state.tofind,this.state.order);
+    }.bind(this),300);
+  }
+  ,onChangeOrder:function(e){
+  	var order=parseInt(e.target.value);
+  	this.setState({order});
+  	this.props.onInputChanged(this.state.tofind,order);
+  }
+  ,sortOption:function(){
+  	if (this.state.tofind.trim()) {
+  		return [
+  		  E("br",{key:1})
+        ,E("label",{key:2},E("input",{onChange:this.onChangeOrder,
+        	name:"order",type:"radio",value:1,defaultChecked:true}),"Natural")
+        ,E("label",{key:3},E("input",{onChange:this.onChangeOrder,
+        	name:"order",type:"radio",value:2}),"Depth")
+        ,E("label",{key:4},E("input",{onChange:this.onChangeOrder,
+        	name:"order",type:"radio",value:3}),"Length")
+      ]
+  	}
+  }
+	,render:function(){
+		return E("div",{style:styles.inputBox},
+        E("input",{placeholder:"Search",style:styles.input,
+          value:this.state.tofind,onChange:this.onChange})
+        ,this.sortOption()
+     );
+  }
+});
+module.exports=InputBox;
+var styles={
+  inputBox:{position:"fixed",zIndex:200, left:15,top:10,opacity:0.7},
+  input:{fontSize:"120%", width:210,borderRadius:5,background:"silver",outline:"none",border:"0px"}
+}
+},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\loadfile.js":[function(require,module,exports){
 /* jsonp loading text dynamically */
 var {action,store,getter,registerGetter}=require("./model");
 
@@ -11693,7 +11761,85 @@ var styles={
 	viewcontrols:{position:"absolute"} //for scrollbar
 }
 module.exports=NotePopup;
-},{"ksana-codemirror":"C:\\ksana2015\\node_modules\\ksana-codemirror\\src\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\toprightmenu.js":[function(require,module,exports){
+},{"ksana-codemirror":"C:\\ksana2015\\node_modules\\ksana-codemirror\\src\\index.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\tocresult.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var PT=React.PropTypes;
+
+var TocResult=React.createClass({
+	getInitialState:function(){
+		return {res:[]};
+	},
+	componentDidMount:function(){
+		this.setState({res:this.search()})
+	}
+	,sortByDepth:function(res){
+		var T=this.props.toc;
+		return res.sort(function(a,b){
+			return T[a].d-T[b].d;
+		});
+	}
+	,sortByLength:function(res){
+		var T=this.props.toc;
+		return res.sort(function(a,b){
+			return T[a].t.length-T[b].t.length;
+		});
+	}
+	,search:function(tofind,order,toc){
+		var res=[];
+		tofind=tofind||this.props.tofind,
+		order=order||this.props.order,
+		toc=toc||this.props.toc;
+		var pat=new RegExp(tofind);
+		for (var i=0;i<toc.length;i++) {
+			var m=toc[i].t.match(pat);
+			if (m) {
+				res.push(i);
+			}
+		}
+		if (order===2) this.sortByDepth(res);
+		else if (order===3) this.sortByLength(res);
+		return res;
+	}
+	,componentWillReceiveProps:function(nextProps){
+		if (nextProps.tofind!==this.props.tofind ||nextProps.order!==this.props.order) {
+	    this.setState({res:this.search(nextProps.tofind,nextProps.order)});
+		}
+	}
+	,highlightText:function(text) {
+		var pat=new RegExp(this.props.tofind);
+		var out=[],lastidx=0;
+		text.replace(pat,function(t,key){
+			out.push(text.substring(lastidx,key));
+			out.push(E("span",{className:"found",key},t));
+			lastidx=key+t.length;
+		});
+		out.push(text.substr(lastidx));
+		return out;
+	}
+	,onSelect:function(e){
+		var n=parseInt(e.target.dataset.n);
+		if (isNaN(n)) {
+			n=parseInt(e.target.parentElement.dataset.n);
+			console.log(n)
+		}
+		this.props.onSelect(this,this.props.toc[n]);
+	}
+	,renderNode:function(n,key){
+		var item=this.props.toc[n];
+		var hl=this.highlightText(item.t);
+		return E("div",{className:"foundline",key,onClick:this.onSelect,"data-n":n},
+			E("div",{style:{fontFamily:item.f}},hl)
+		);
+	}
+	,render:function(){
+		return E("div",{},
+			this.state.res.map(this.renderNode)
+		);
+	}
+});
+module.exports=TocResult;
+},{"react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-parallel\\src\\toprightmenu.js":[function(require,module,exports){
 var React=require("react");
 var E=React.createElement;
 var PT=React.PropTypes;
