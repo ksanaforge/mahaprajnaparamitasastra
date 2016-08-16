@@ -43,23 +43,32 @@ var patterns={
  bold:/\{([^k]+?)\}/g,
  kai:/\{k(.+?)k\}/g,
  pagebreak:/~(\d+)/g,
- taisho:/t(\d+)p(\d+)([a-c])?/,
+ taisho:/t(\d+)p(\d+)([a-c]?)/,
+ taisho_full:/t(\d+)p(\d+)([a-c])([0-9]+)/,
  yinshun_note:/y([A-Z][0-9]+)p[0-9]+/
 }
 
 var onTagClick=function(e){
 	var cls=e.target.className;  
+	var t=e.target.innerHTML;
 	if (cls==="paragraph") {
 		actionhandler("gopara",e.target.innerHTML);
 	} else if (cls==="link") {
-		var m=e.target.innerHTML.match(patterns.taisho);
+		
+		var m=t.match(patterns.taisho);
 		if (m) {
-			var vol=m[1],pg=m[2],col=m[3];
-			window.open("http://www.cbeta.org/cgi-bin/goto.pl?book=T&vol="+vol+"&page="+pg+"&col="+col);
+			var full=t.match(patterns.taisho_full);
+			vol=m[1],pg=m[2],col=m[3],line=1;
+			full&&(line=full[4]);
+			actionhandler("leavingfrom",makeLink(t));
+			var url="http://www.cbeta.org/cgi-bin/goto.pl?book=T&vol="+vol+"&page="+pg+"&col="+col+"&line="+line;
+			window.open(url);
 		}
 		m=e.target.innerHTML.match(patterns.yinshun_note);
 		if (m) {
-			window.open("http://ya.ksana.tw/mpps_yinshun_note_img/"+m[1][0]+"/"+m[1]+".jpg");
+			actionhandler("leavingfrom",makeLink(t));
+			var url="http://ya.ksana.tw/mpps_yinshun_note_img/"+m[1][0]+"/"+m[1]+".jpg";
+			window.open(url);
 		}
 	}
 }
@@ -121,6 +130,9 @@ var makeParagraph=function(id) {
 var makeKepan=function(id) {
 	return "%"+id;
 }
+var makeLink=function(id){
+	return "@"+id
+}
 var getParagraph=function(content){
 	var out=[];
 	content.replace(patterns.paragraph,function(m,m1){
@@ -181,7 +193,7 @@ var markLine=function(doc,i, opts) {
 			element.marker=marker;
 		});
 	} else {
-		line.replace(/~(\d+)/g,function(m,pb,idx){
+		line.replace(pagebreak,function(m,pb,idx){
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{className:"hide"});
 		});
@@ -11227,6 +11239,7 @@ var CMView=React.createClass({
 	}
 	,defaultListeners:function(){
 		this.context.store.listen("gopara",this.onGoPara,this);
+		this.context.store.listen("leavingfrom",this.onLeavingFrom,this);
 		this.context.store.listen("gokepan",this.onGoKepan,this);
 		this.context.store.listen("loaded",this.onLoaded,this);
 		this.context.store.listen("showfootnote",this.showfootnote,this);
@@ -11242,6 +11255,27 @@ var CMView=React.createClass({
 			return at>-1;
 		}	
 		return false;
+	}
+	,leavingFrom:null
+	,leavingClass:""
+	,onLeavingFrom:function(link){
+		if(this.leavingFrom) {
+				this.leavingFrom.replacedWith.className=this.leavingClass;
+				this.leavingFrom=null;
+		}
+		var cm=this.refs.cm.getCodeMirror();
+		var screentext=this.getScreenText();
+		var vp=cm.getViewport();
+		var i=screentext.indexOf(link);
+		if (i>-1) {
+			var pos=cm.posFromIndex(i+cm.indexFromPos({line:vp.from,ch:1}));
+			var marks=cm.findMarks(pos,{line:pos.line,ch:pos.ch+link.length});
+			if (marks.length && marks[0].replacedWith) {
+				this.leavingClass=marks[0].replacedWith.className;
+				this.leavingFrom=marks[0];
+				marks[0].replacedWith.className="link_visited";
+			}
+		}
 	}
 	,popupFootnote:function(){
 			var rule=this.getDocRule();

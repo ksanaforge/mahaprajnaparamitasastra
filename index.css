@@ -6,7 +6,8 @@ body {margin:0px;}
 .paragraph{font-size:75%;background: darkgreen; 
 	border-radius:5px;color:white;cursor:pointer;}
 .footnote{font-size:50%;background: pink; border-radius:5px;color:black;cursor:pointer}
-.link {font-size:50%;color:lightblue;text-decoration: underline;cursor:pointer}
+.link {font-size:75%;color:#7f7fFF;text-decoration: underline;cursor:pointer}
+.link_visited{background:red;font-size:75%;text-decoration:underline;cursor:pointer;}
 .kai {font-family: DFKai-SB;font-size:90%;font-width:100;}
 .bold {font-weight: bold;}
 .hide {display:none;}
