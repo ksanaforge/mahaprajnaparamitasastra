@@ -16,7 +16,8 @@ var maincomponent = React.createClass({
   componentDidMount:function(){
   }
   ,render: function() {
-    return E(TwoColumnMode,{rightDocs,leftDocs,leftDoc,rightDoc});
+    return E(TwoColumnMode,{
+      ControlTab:"kepan",rightDocs,leftDocs,leftDoc,rightDoc});
   }
 });
 module.exports=maincomponent;

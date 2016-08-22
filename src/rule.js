@@ -7,6 +7,7 @@ var patterns={
  paragraph:/\^(\d+\.\d+)/g,
  link:/@([A-Za-z0-9]+)/g,
  kepan:/%(\d+\.\d+) (.*)%?/g,
+ kepan_seq:/%(\d+\.\d+)/g,
  bold:/\{([^k]+?)\}/g,
  kai:/\{k(.+?)k\}/g,
  pagebreak:/~(\d+)/g,
@@ -223,12 +224,31 @@ var markLine=function(doc,i, opts) {
 	});
 
 }
+var getCiteFrom=function(text,position){
+	var t=text.substring(0,position);
+	var p=t.lastIndexOf("~");
+	var page=0;
+	if (p>-1) {
+		page=parseInt(t.substr(p+1));
+	}
 
+	return "《大智度論講義》"+(page?"第"+page+"頁":"");
+}
+var excerptCopy=function(selected,text,position){
+	var citefrom=getCiteFrom(text,position);
+	return "「"+selected.replace(patterns.footnote,"")
+	.replace(/\{k/g,"").replace(/k\}/g,"")
+	.replace(/\}/g,"").replace(/\}/g,"")
+	.replace(patterns.link,"")
+	.replace(patterns.kepan_seq,"")
+	.replace(patterns.pagebreak,"")+"」"+citefrom;
+}
 var setActionHandler=function(_actionhandler){
 	actionhandler=_actionhandler;
 }
 module.exports={markAllLine,markLine,markLines
 	,getNotes,getNoteFile
+	,excerptCopy
 	,getParagraph,makeParagraph,makeKepan,makeFootnote
 	,patterns
 	,setActionHandler};
