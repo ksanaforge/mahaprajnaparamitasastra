@@ -242,6 +242,7 @@ var excerptCopy=function(selected,text,position){
 	.replace(patterns.link,"")
 	.replace(patterns.kepan_seq,"")
 	.replace(patterns.pagebreak,"")+"」"+citefrom;
+
 }
 var setActionHandler=function(_actionhandler){
 	actionhandler=_actionhandler;
