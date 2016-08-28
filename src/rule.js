@@ -163,7 +163,7 @@ var markLine=function(doc,i, opts) {
 			element.marker=marker;
 		});
 	} else {
-		line.replace(pagebreak,function(m,pb,idx){
+		line.replace(patterns.pagebreak,function(m,pb,idx){
 			var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+m.length},
 				{className:"hide"});
 		});
@@ -214,16 +214,22 @@ var markLine=function(doc,i, opts) {
 		});
 	}
 
-
 	line.replace(patterns.kepan,function(m,d,title,idx){
-		var element=createMarker("kepan",d);
-		var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
-			{replacedWith:element});
-		element.marker=marker;
+			var element=createMarker("kepan",d);
 
-		doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},
-			{className:"kepannode"});
-	});
+			if (i==activeline){
+				var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
+				{replacedWith:element});
+				element.marker=marker;
+			} else {
+				var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
+					{className:"hide"});
+			}
+
+			
+			doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},
+				{className:"kepannode"});
+	});		
 
 }
 var getCiteFrom=function(text,position){
