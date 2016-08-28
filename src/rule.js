@@ -38,6 +38,8 @@ var onTagClick=function(e){
 			var url="http://ya.ksana.tw/mpps_yinshun_note_img/"+m[1][0]+"/"+m[1]+".jpg";
 			window.open(url);
 		}
+	} else if (cls=="kepan") {
+		console.log(t);
 	}
 }
 var hovertimer=null;
