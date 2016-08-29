@@ -39,7 +39,7 @@ var onTagClick=function(e){
 			window.open(url);
 		}
 	} else if (cls=="kepan") {
-		console.log(t);
+		actionhandler("openkepan",t);
 	}
 }
 var hovertimer=null;
