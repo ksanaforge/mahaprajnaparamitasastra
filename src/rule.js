@@ -226,9 +226,10 @@ var markLine=function(doc,i, opts) {
 					{className:"hide"});
 			}
 
-			
+			var toci=getTocNodeById(d)||{d:0};
+			console.log("kepanlevel"+toc[toci].d)
 			doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},
-				{className:"kepannode"});
+				{className:"kepanlevel kepanlevel"+toc[toci].d});
 	});		
 
 }
@@ -255,9 +256,42 @@ var excerptCopy=function(selected,text,position){
 var setActionHandler=function(_actionhandler){
 	actionhandler=_actionhandler;
 }
+var toc=null;
+var tocindex=[];//group name, starting, ending
+var buildTocIndex=function(toc){
+	var prevgroup=0,groupstart=0;
+	tocindex=[];
+	for (var i=0;i<toc.length;i++) {
+		var T=toc[i];
+		if (!T.l)continue;
+		var at=T.l.indexOf(".");
+		var group=parseInt(T.l.substr(0,at));
+		if (prevgroup && group!==prevgroup){
+			tocindex[prevgroup]=[groupstart,i];
+			groupstart=i;
+		}
+		prevgroup=group;
+	}
+	tocindex[prevgroup]=[groupstart,toc.length];
+}
+var setToc=function(_toc){
+	if (toc!==_toc) buildTocIndex(_toc);
+	toc=_toc;
+}
+var getTocNodeById=function(id){
+	var group=parseInt(id);
+	if (!tocindex[group])return null;
+	var g=tocindex[group];
+	for (var i=g[0] ;i<g[1];i++) {
+		if (toc[i].l==id) return i;
+	}
+	return null;
+}
 module.exports={markAllLine,markLine,markLines
 	,getNotes,getNoteFile
 	,excerptCopy
 	,getParagraph,makeParagraph,makeKepan,makeFootnote
 	,patterns
+	,setToc
+	,getTocNodeById
 	,setActionHandler};

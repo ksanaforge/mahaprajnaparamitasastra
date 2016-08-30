@@ -14,9 +14,27 @@ body {margin:0px;}
 .kepan{font-size:75%;color:rgba(0,255,0,0.5);cursor:pointer;}
 /*not to use border as it might trigger line height adjustment*/
 /* use rainbow color */
-.kepannode {text-decoration: underline overline;color:lightgreen;}
+
 .ndef {font-size:80%;line-height: 125%;}
 .ndef_odd {background: #002020;}
 .ndef_even {background: #202000;}
 .found {background-color:rgba(255,30,39,0.5)}
 .foundline {cursor:pointer;border-bottom:1px solid silver}
+.kepanlevel{color:black;font-weight: bold;border-radius: 5px}
+.kepanlevel0 { background-color:hsl(30,40%,50%);}
+.kepanlevel1 { background-color:hsl(60,40%,50%);}
+.kepanlevel2 { background-color:hsl(90,40%,50%);}
+.kepanlevel3 { background-color:hsl(120,40%,50%);}
+.kepanlevel4 { background-color:hsl(150,40%,50%);}
+.kepanlevel5 { background-color:hsl(180,40%,50%);}
+.kepanlevel6 { background-color:hsl(210,40%,50%);}
+.kepanlevel7 { background-color:hsl(240,40%,50%);}
+.kepanlevel8 { background-color:hsl(270,40%,50%);}
+.kepanlevel9 { background-color:hsl(300,40%,50%);}
+.kepanlevel10 { background-color:hsl(330,40%,50%);}
+.kepanlevel11 { background-color:hsl(0,40%,50%);}
+.kepanlevel12 { background-color:hsl(30,40%,50%);}
+.kepanlevel13 { background-color:hsl(60,40%,50%);}
+.kepanlevel14 { background-color:hsl(90,40%,50%);}
+.kepanlevel15 { background-color:hsl(120,40%,50%);}
+.kepanlevel16 { background-color:hsl(180,40%,50%);}
