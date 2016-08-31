@@ -38,7 +38,7 @@ var onTagClick=function(e){
 			var url="http://ya.ksana.tw/mpps_yinshun_note_img/"+m[1][0]+"/"+m[1]+".jpg";
 			window.open(url);
 		}
-	} else if (cls=="kepan") {
+	} else if (cls=="kepan" || cls=="kepannomatch") {
 		actionhandler("openkepan",t);
 	}
 }
@@ -216,18 +216,18 @@ var markLine=function(doc,i, opts) {
 
 	line.replace(patterns.kepan,function(m,d,title,idx){
 			var element=createMarker("kepan",d);
+			var toci=getTocNodeById(d)||{d:0};
 
-			if (i==activeline){
+			//if (i==activeline){
 				var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
 				{replacedWith:element});
+				if (!toc[toci].l2) element.className="kepannomatch";
 				element.marker=marker;
-			} else {
-				var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
-					{className:"hide"});
-			}
+			//} else {
+			//	var marker=doc.markText({line:i,ch:idx},{line:i,ch:idx+d.length+1},
+			//		{className:"hide"});
+			//}
 
-			var toci=getTocNodeById(d)||{d:0};
-			console.log("kepanlevel"+toc[toci].d)
 			doc.markText({line:i,ch:idx+d.length+2},{line:i,ch:idx+m.length},
 				{className:"kepanlevel kepanlevel"+toc[toci].d});
 	});		

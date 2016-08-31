@@ -12,6 +12,7 @@ body {margin:0px;}
 .bold {font-weight: bold;}
 .hide {display:none;}
 .kepan{font-size:75%;color:rgba(0,255,0,0.5);cursor:pointer;}
+.kepannomatch {border-radius:5px;font-size:75%;background-color:rgba(255,0,0,0.7);cursor:pointer;}
 /*not to use border as it might trigger line height adjustment*/
 /* use rainbow color */
 
